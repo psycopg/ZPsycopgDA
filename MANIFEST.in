@@ -1,0 +1,3 @@
+include CONTRIBUTORS.txt CHANGES.txt
+recursive-include ZPsycopgDA/dtml *
+recursive-include ZPsycopgDA/icons *

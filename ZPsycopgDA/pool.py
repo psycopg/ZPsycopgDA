@@ -20,10 +20,7 @@
 
 import threading
 import psycopg2
-
-
-class PoolError(psycopg2.Error):
-    pass
+from psycopg2.pool import PoolError
 
 
 class AbstractConnectionPool(object):

@@ -3,9 +3,9 @@
 Introduction
 ============
 
-This is the PostgreSQL adapter for Zope 2 based on psycopg2__. Ot at least I
-believe so. This code used to be in psycopg2 until the 2.4.x branch but it was
-bitrotting as none of the current Psycopg maintainer uses Zope.
+This is the PostgreSQL adapter for Zope 2 and 3 based on psycopg2__. Ot at
+least I believe so. This code used to be in psycopg2 until the 2.4.x branch
+but it was bitrotting as none of the current Psycopg maintainer uses Zope.
 
 The current state of this project is UNMAINTAINED, although it probably
 contains less bugs than the versions in Psycopg 2.4.x. If you are a Zope user

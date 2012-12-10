@@ -15,8 +15,8 @@
 # Import modules needed by _psycopg to allow tools like py2exe to do
 # their work without bothering about the module dependencies.
 
-__doc__ = "ZPsycopg Database Adapter Registration." 
-__version__ = '2.0'
+__doc__ = "ZPsycopg Database Adapter Registration."
+__version__ = '2.4.6dev0'
 
 import DA
 

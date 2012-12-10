@@ -1,7 +1,16 @@
 from setuptools import setup, find_packages
-import os
 
-version = '2.4.4'
+# Get the version number from the package
+f = open('ZPsycopgDA/__init__.py')
+try:
+    for line in f:
+        if line.startswith('__version__'):
+            version = line.split()[-1]
+            break
+    else:
+        raise ValueError('__version__ not found')
+finally:
+    f.close()
 
 long_description = (
     open('README.rst').read()

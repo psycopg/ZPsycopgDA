@@ -1,2 +1,3 @@
-- Federico Di Georgio, Original Author
-- Rijk Stofberg, Eggifying
+- Federico Di Georgio: Original Author
+- Daniele Varrazzo: Separate ZPsycopgDA project
+- Rijk Stofberg: Eggifying

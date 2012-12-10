@@ -5,7 +5,7 @@ f = open('ZPsycopgDA/__init__.py')
 try:
     for line in f:
         if line.startswith('__version__'):
-            version = line.split()[-1]
+            version = line.split()[-1].replace("'", "")
             break
     else:
         raise ValueError('__version__ not found')

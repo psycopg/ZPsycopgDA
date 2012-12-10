@@ -71,7 +71,7 @@ class DB(TM, dbi_db.DB):
         pool.putconn(self.dsn, conn, close)
 
     def getcursor(self):
-        conn = self.getconn()
+        conn = self.getconn(False)
         return conn.cursor()
 
     def _finish(self, *ignored):

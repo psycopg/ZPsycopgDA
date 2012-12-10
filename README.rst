@@ -1,7 +1,5 @@
-.. contents::
-
-Introduction
-============
+ZPsycopgDA -- psycopg2 Zope adapter
+===================================
 
 This is the PostgreSQL adapter for Zope 2 and 3 based on psycopg2__.  It used
 to be in psycopg2 until the 2.4.x branch, but creating an external project

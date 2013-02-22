@@ -16,8 +16,6 @@
 # their work without bothering about the module dependencies.
 
 
-ALLOWED_PSYCOPG_VERSIONS = ('2.4', '2.4.1', '2.4.4', '2.4.5', '2.4.6')
-
 import sys
 import time
 import db
@@ -114,9 +112,7 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
             pass
 
         # check psycopg version and raise exception if does not match
-        if psycopg2.__version__.split(' ')[0] not in ALLOWED_PSYCOPG_VERSIONS:
-            raise ImportError("psycopg version mismatch (imported %s)" %
-                              psycopg2.__version__)
+        check_psycopg_version(psycopg2.__version__)
 
         self._v_connected = ''
         dbf = self.factory()
@@ -175,6 +171,22 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
             except:
                 pass
         return res
+
+def check_psycopg_version(version):
+    """
+    Check that the psycopg version used is compatible with the zope adpter.
+    """
+    try:
+        m = re.match(r'\d+\.\d+(\.\d+)?', version.split(' ')[0])
+        tver = tuple(map(int, m.group().split('.')))
+    except:
+        raise ImportError("failed to parse psycopg version %s" % version)
+
+    if tver < (2, 4):
+        raise ImportError("psycopg version %s is too old" % version)
+
+    if tver in ((2,4,2), (2,4,3)):
+        raise ImportError("psycopg version %s is known to be buggy" % version)
 
 
 ## database connection registration data ##

@@ -40,7 +40,7 @@ setup(name='ZPsycopgDA',
       packages=['ZPsycopgDA'],
       package_dir = {'': '.'},
       namespace_packages=['ZPsycopgDA'],
-      include_package_data=True,
+      package_data={'ZPsycopgDA': ['dtml/*', 'icons/*']},
       zip_safe=False,
       install_requires=[
           'setuptools',

@@ -30,6 +30,22 @@ latest version available.
 Installation
 ------------
 
-After unpacking the archive run ``python setup.py install`` in this directory.
-Alternatively use ``easy_install ZPsycopgDA`` or ``pip install ZPsycopgDA``.
-The usual stuff.
+Unfortunately I'm no Zope expert, so these installation instructions are quite
+approximative. Please contact us if you want to improve them.
+
+- Make sure to have your Zope ``lib`` directory in the ``$PYTHONPATH``. If
+  some command fails with::
+
+    [...]
+    File "[...]/ZPsycopgDA/db.py", line 18, in <module>
+      from Shared.DC.ZRDB.TM import TM
+    ImportError: No module named Shared.DC.ZRDB.TM
+
+  you are probably missing it.
+
+- Download the ZPsycopgDA package, unpack it and copy the ``ZPsycopgDA``
+  directory into the ``Products`` directory of your Zope instance.
+
+- Alternatively run ``easy_install ZPsycopgDA`` or ``pip install ZPsycopgDA``,
+  then symlink or copy the ``ZPsycopgDA`` directory from the installed
+  location to the ``Products`` directory of your Zope instance.

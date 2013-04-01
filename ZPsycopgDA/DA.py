@@ -46,13 +46,15 @@ from psycopg2.extensions import INTEGER, LONGINTEGER, FLOAT, BOOLEAN, DATE
 from psycopg2.extensions import TIME, INTERVAL
 from psycopg2.extensions import new_type, register_type
 
+import psycopg2.extensions
+DEFAULT_TILEVEL = psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ
 
 # add a new connection to a folder
 
 manage_addZPsycopgConnectionForm = HTMLFile('dtml/add',globals())
 
 def manage_addZPsycopgConnection(self, id, title, connection_string,
-                                 zdatetime=None, tilevel=2,
+                                 zdatetime=None, tilevel=DEFAULT_TILEVEL,
                                  encoding='', check=None, REQUEST=None):
     """Add a DB connection to a folder."""
     self._setObject(id, Connection(id, title, connection_string,
@@ -72,7 +74,8 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
     icon              = 'misc_/conn'
 
     def __init__(self, id, title, connection_string,
-                 zdatetime, check=None, tilevel=2, encoding='UTF-8'):
+                 zdatetime, check=None, tilevel=DEFAULT_TILEVEL,
+                 encoding='UTF-8'):
         self.zdatetime = zdatetime
         self.id = str(id)
         self.edit(title, connection_string, zdatetime,
@@ -84,7 +87,7 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
     ## connection parameters editing ##
     
     def edit(self, title, connection_string,
-             zdatetime, check=None, tilevel=2, encoding='UTF-8'):
+             zdatetime, check=None, tilevel=DEFAULT_TILEVEL, encoding='UTF-8'):
         self.title = title
         self.connection_string = connection_string
         self.zdatetime = zdatetime
@@ -96,8 +99,8 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
     manage_properties = HTMLFile('dtml/edit', globals())
 
     def manage_edit(self, title, connection_string,
-                    zdatetime=None, check=None, tilevel=2, encoding='UTF-8',
-                    REQUEST=None):
+                    zdatetime=None, check=None, tilevel=DEFAULT_TILEVEL,
+                    encoding='UTF-8', REQUEST=None):
         """Edit the DB connection."""
         self.edit(title, connection_string, zdatetime,
                   check=check, tilevel=tilevel, encoding=encoding)

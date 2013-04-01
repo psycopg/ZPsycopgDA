@@ -42,6 +42,8 @@ def test_suite():
 
     import test_da_threading
     suite.addTest(test_da_threading.test_suite())
+    import test_xn_reset
+    suite.addTest(test_xn_reset.test_suite())
 
     return suite
 

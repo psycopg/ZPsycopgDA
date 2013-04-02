@@ -26,7 +26,9 @@ class DaThreadingTests(unittest.TestCase):
         failures = []
 
         def assert_casts(conn, name):
-            connection = conn.getcursor().connection
+            curs = conn.getcursor()
+            #curs = conn.getconn().cursor()
+            connection = curs.connection
             if (connection.string_types !=
                     {1114: ZDATETIME, 1184: ZDATETIME}):
                 failures.append(

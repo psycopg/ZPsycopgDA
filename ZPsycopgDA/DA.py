@@ -16,9 +16,7 @@
 # their work without bothering about the module dependencies.
 
 
-import sys
 import time
-import db
 import re
 
 import Acquisition
@@ -27,7 +25,6 @@ import Shared.DC.ZRDB.Connection
 from db import DB
 from Globals import HTMLFile
 from ExtensionClass import Base
-from App.Dialogs import MessageDialog
 from DateTime import DateTime
 
 # ImageFile is deprecated in Zope >= 2.9
@@ -42,16 +39,17 @@ except ImportError:
 
 import psycopg2
 from psycopg2 import NUMBER, STRING, ROWID, DATETIME
-from psycopg2.extensions import INTEGER, LONGINTEGER, FLOAT, BOOLEAN, DATE
-from psycopg2.extensions import TIME, INTERVAL
-from psycopg2.extensions import new_type, register_type
+from psycopg2.extensions import INTEGER, FLOAT, BOOLEAN, DATE
+from psycopg2.extensions import TIME
+from psycopg2.extensions import new_type
 
 import psycopg2.extensions
 DEFAULT_TILEVEL = psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ
 
 # add a new connection to a folder
 
-manage_addZPsycopgConnectionForm = HTMLFile('dtml/add',globals())
+manage_addZPsycopgConnectionForm = HTMLFile('dtml/add', globals())
+
 
 def manage_addZPsycopgConnection(self, id, title, connection_string,
                                  zdatetime=None, tilevel=DEFAULT_TILEVEL,
@@ -59,7 +57,8 @@ def manage_addZPsycopgConnection(self, id, title, connection_string,
     """Add a DB connection to a folder."""
     self._setObject(id, Connection(id, title, connection_string,
                                    zdatetime, check, tilevel, encoding))
-    if REQUEST is not None: return self.manage_main(self, REQUEST)
+    if REQUEST is not None:
+        return self.manage_main(self, REQUEST)
 
 
 # the connection object
@@ -67,8 +66,8 @@ def manage_addZPsycopgConnection(self, id, title, connection_string,
 class Connection(Shared.DC.ZRDB.Connection.Connection):
     """ZPsycopg Connection."""
     _isAnSQLConnection = 1
-    
-    id                = 'Psycopg2_database_connection' 
+
+    id                = 'Psycopg2_database_connection'
     database_type     = 'Psycopg2'
     meta_type = title = 'Z Psycopg 2 Database Connection'
     icon              = 'misc_/conn'
@@ -80,12 +79,12 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
         self.id = str(id)
         self.edit(title, connection_string, zdatetime,
                   check=check, tilevel=tilevel, encoding=encoding)
-        
+
     def factory(self):
         return DB
 
     ## connection parameters editing ##
-    
+
     def edit(self, title, connection_string,
              zdatetime, check=None, tilevel=DEFAULT_TILEVEL, encoding='UTF-8'):
         self.title = title
@@ -93,8 +92,9 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
         self.zdatetime = zdatetime
         self.tilevel = tilevel
         self.encoding = encoding
-        
-        if check: self.connect(self.connection_string)
+
+        if check:
+            self.connect(self.connection_string)
 
     manage_properties = HTMLFile('dtml/edit', globals())
 
@@ -119,7 +119,7 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
 
         self._v_connected = ''
         dbf = self.factory()
-        
+
         # TODO: let the psycopg exception propagate, or not?
         self._v_database_connection = dbf(
             self.connection_string, self.tilevel, self.get_type_casts(), self.encoding)
@@ -145,14 +145,14 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
     #manage_browse = HTMLFile('dtml/browse', globals())
 
     info = None
-    
+
     def table_info(self):
         return self._v_database_connection.table_info()
 
-
     def __getitem__(self, name):
         if name == 'tableNamed':
-            if not hasattr(self, '_v_tables'): self.tpValues()
+            if not hasattr(self, '_v_tables'):
+                self.tpValues()
             return self._v_tables.__of__(self)
         raise KeyError, name
 
@@ -165,15 +165,16 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
                 b = TableBrowser()
                 b.__name__ = name
                 b._d = d
-                b._c = c
+                b._c = conn
                 try:
                     b.icon = table_icons[d['TABLE_TYPE']]
                 except:
                     pass
-                r.append(b)
+                res.append(b)
             except:
                 pass
         return res
+
 
 def check_psycopg_version(version):
     """
@@ -226,6 +227,7 @@ def _cast_DateTime(iso, curs):
         else:
             return DateTime(iso)
 
+
 # convert an ISO date string from postgres to a Zope DateTime object
 def _cast_Date(iso, curs):
     if iso:
@@ -233,6 +235,7 @@ def _cast_Date(iso, curs):
             return iso
         else:
             return DateTime(iso)
+
 
 # Convert a time string from postgres to a Zope DateTime object.
 # NOTE: we set the day as today before feeding to DateTime so
@@ -245,6 +248,7 @@ def _cast_Time(iso, curs):
             return DateTime(time.strftime('%Y-%m-%d %H:%M:%S',
                                       time.localtime(time.time())[:3]+
                                       time.strptime(iso[:8], "%H:%M:%S")[3:]))
+
 
 # NOTE: we don't cast intervals anymore because they are passed
 # untouched to Zope.
@@ -262,12 +266,14 @@ ZTIME = new_type((1083,), "ZTIME", _cast_Time)
 class TableBrowserCollection(Acquisition.Implicit):
     pass
 
+
 class Browser(Base):
     def __getattr__(self, name):
         try:
             return self._d[name]
         except KeyError:
             raise AttributeError, name
+
 
 class values:
     def len(self):
@@ -280,6 +286,7 @@ class values:
             pass
         self._d = self._f()
         return self._d[i]
+
 
 class TableBrowser(Browser, Acquisition.Implicit):
     icon = 'what'
@@ -298,18 +305,28 @@ class TableBrowser(Browser, Acquisition.Implicit):
         for d in self._c.columns(tname):
             b=ColumnBrowser()
             b._d=d
-            try: b.icon=field_icons[d['Type']]
-            except: pass
+            try:
+                b.icon=field_icons[d['Type']]
+            except:
+                pass
             b.TABLE_NAME=tname
             r.append(b)
         return r
-            
-    def tpId(self): return self._d['TABLE_NAME']
-    def tpURL(self): return "Table/%s" % self._d['TABLE_NAME']
-    def Name(self): return self._d['TABLE_NAME']
-    def Type(self): return self._d['TABLE_TYPE']
+
+    def tpId(self):
+        return self._d['TABLE_NAME']
+
+    def tpURL(self):
+        return "Table/%s" % self._d['TABLE_NAME']
+
+    def Name(self):
+        return self._d['TABLE_NAME']
+
+    def Type(self):
+        return self._d['TABLE_TYPE']
 
     manage_designInput=HTMLFile('designInput',globals())
+
     def manage_buildInput(self, id, source, default, REQUEST=None):
         "Create a database method for an input form"
         args=[]
@@ -318,7 +335,8 @@ class TableBrowser(Browser, Acquisition.Implicit):
         columns=self._columns
         for i in range(len(source)):
             s=source[i]
-            if s=='Null': continue
+            if s=='Null':
+                continue
             c=columns[i]
             d=default[i]
             t=c['Type']
@@ -328,14 +346,16 @@ class TableBrowser(Browser, Acquisition.Implicit):
                 values.append("<dtml-sqlvar %s type=%s>'" %
                               (n, vartype(t)))
                 a='%s%s' % (n, boboType(t))
-                if d: a="%s=%s" % (a,d)
+                if d:
+                    a="%s=%s" % (a,d)
                 args.append(a)
             elif s=='Property':
                 values.append("<dtml-sqlvar %s type=%s>'" %
                               (n, vartype(t)))
             else:
                 if isStringType(t):
-                    if find(d,"\'") >= 0: d=join(split(d,"\'"),"''")
+                    if find(d,"\'") >= 0:
+                        d=join(split(d,"\'"),"''")
                     values.append("'%s'" % d)
                 elif d:
                     values.append(str(d))
@@ -343,14 +363,20 @@ class TableBrowser(Browser, Acquisition.Implicit):
                     raise ValueError, (
                         'no default was given for <em>%s</em>' % n)
 
+
 class ColumnBrowser(Browser):
     icon='field'
 
     def check(self):
         return ('\t<input type=checkbox name="%s.%s">' %
                 (self.TABLE_NAME, self._d['Name']))
-    def tpId(self): return self._d['Name']
-    def tpURL(self): return "Column/%s" % self._d['Name']
+
+    def tpId(self):
+        return self._d['Name']
+
+    def tpURL(self):
+        return "Column/%s" % self._d['Name']
+
     def Description(self):
         d=self._d
         if d['Scale']:

@@ -20,11 +20,10 @@ from Shared.DC.ZRDB import dbi_db
 
 from ZODB.POSException import ConflictError
 
-import site
 import pool
 
 import psycopg2
-from psycopg2.extensions import INTEGER, LONGINTEGER, FLOAT, BOOLEAN, DATE, TIME
+from psycopg2.extensions import INTEGER, LONGINTEGER, BOOLEAN, DATE, TIME
 from psycopg2.extensions import TransactionRollbackError, register_type
 from psycopg2 import NUMBER, STRING, ROWID, DATETIME
 
@@ -81,7 +80,7 @@ class DB(TM, dbi_db.DB):
             self.putconn()
         except AttributeError:
             pass
-            
+
     def _abort(self, *ignored):
         try:
             conn = self.getconn(False)
@@ -153,7 +152,7 @@ class DB(TM, dbi_db.DB):
         self._register()
         c = self.getcursor()
         try:
-            r = c.execute('SELECT * FROM "%s" WHERE 1=0' % table_name)
+            c.execute('SELECT * FROM "%s" WHERE 1=0' % table_name)
         except:
             return ()
         self.putconn()

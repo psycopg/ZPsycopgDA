@@ -124,7 +124,7 @@ class DB(TM, dbi_db.DB):
                 'precision': p,
                 'scale': scale,
                 'null': null_ok,
-                })
+            })
         return items
 
     ## tables and rows ##

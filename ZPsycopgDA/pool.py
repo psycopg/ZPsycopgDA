@@ -178,7 +178,7 @@ _connections_lock = threading.Lock()
 def getpool(dsn, create=True):
     _connections_lock.acquire()
     try:
-        if not _connections_pool.has_key(dsn) and create:
+        if dsn not in _connections_pool.has_key and create:
             _connections_pool[dsn] = \
                 PersistentConnectionPool(4, 200, dsn)
     finally:

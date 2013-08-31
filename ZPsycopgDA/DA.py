@@ -154,7 +154,7 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
             if not hasattr(self, '_v_tables'):
                 self.tpValues()
             return self._v_tables.__of__(self)
-        raise KeyError, name
+        raise KeyError(name)
 
     def tpValues(self):
         res = []
@@ -245,9 +245,10 @@ def _cast_Time(iso, curs):
         if iso in ['-infinity', 'infinity']:
             return iso
         else:
-            return DateTime(time.strftime('%Y-%m-%d %H:%M:%S',
-                                      time.localtime(time.time())[:3]+
-                                      time.strptime(iso[:8], "%H:%M:%S")[3:]))
+            return DateTime(
+                time.strftime('%Y-%m-%d %H:%M:%S',
+                              time.localtime(time.time())[:3] +
+                              time.strptime(iso[:8], "%H:%M:%S")[3:]))
 
 
 # NOTE: we don't cast intervals anymore because they are passed
@@ -272,7 +273,7 @@ class Browser(Base):
         try:
             return self._d[name]
         except KeyError:
-            raise AttributeError, name
+            raise AttributeError(name)
 
 
 class values:
@@ -360,7 +361,7 @@ class TableBrowser(Browser, Acquisition.Implicit):
                 elif d:
                     values.append(str(d))
                 else:
-                    raise ValueError, (
+                    raise ValueError(
                         'no default was given for <em>%s</em>' % n)
 
 
@@ -388,7 +389,7 @@ table_icons={
     'TABLE': 'table',
     'VIEW':'view',
     'SYSTEM_TABLE': 'stable',
-    }
+}
 
 field_icons={
     NUMBER.name: 'i',
@@ -398,4 +399,4 @@ field_icons={
     FLOAT.name: 'float',
     BOOLEAN.name: 'bin',
     ROWID.name: 'int'
-    }
+}

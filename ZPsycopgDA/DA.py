@@ -328,6 +328,14 @@ class TableBrowser(Browser, Acquisition.Implicit):
 
     manage_designInput=HTMLFile('designInput',globals())
 
+    @staticmethod
+    def vartype(inVar):
+        "Get a type name for a variable suitable for use with dtml-sqlvar"
+        outVar = type(inVar)
+        if outVar == 'str':
+            outVar = 'string'
+        return outVar
+
     def manage_buildInput(self, id, source, default, REQUEST=None):
         "Create a database method for an input form"
         args=[]
@@ -345,18 +353,18 @@ class TableBrowser(Browser, Acquisition.Implicit):
             names.append(n)
             if s=='Argument':
                 values.append("<dtml-sqlvar %s type=%s>'" %
-                              (n, vartype(t)))
-                a='%s%s' % (n, boboType(t))
+                              (n, self.vartype(t)))
+                a='%s%s' % (n, self.vartype(t).title())
                 if d:
                     a="%s=%s" % (a,d)
                 args.append(a)
             elif s=='Property':
                 values.append("<dtml-sqlvar %s type=%s>'" %
-                              (n, vartype(t)))
+                              (n, self.vartype(t)))
             else:
-                if isStringType(t):
-                    if find(d,"\'") >= 0:
-                        d=join(split(d,"\'"),"''")
+                if isinstance(t, basestring):
+                    if d.find("\'") >= 0:
+                        d="''".join(d.split("\'"))
                     values.append("'%s'" % d)
                 elif d:
                     values.append(str(d))

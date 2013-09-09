@@ -20,11 +20,10 @@ from Shared.DC.ZRDB import dbi_db
 
 from ZODB.POSException import ConflictError
 
-import site
 import pool
 
 import psycopg2
-from psycopg2.extensions import INTEGER, LONGINTEGER, FLOAT, BOOLEAN, DATE, TIME
+from psycopg2.extensions import INTEGER, LONGINTEGER, BOOLEAN, DATE, TIME
 from psycopg2.extensions import TransactionRollbackError, register_type
 from psycopg2 import NUMBER, STRING, ROWID, DATETIME
 
@@ -81,7 +80,7 @@ class DB(TM, dbi_db.DB):
             self.putconn()
         except AttributeError:
             pass
-            
+
     def _abort(self, *ignored):
         try:
             conn = self.getconn(False)
@@ -107,8 +106,8 @@ class DB(TM, dbi_db.DB):
     def make_mappings(self):
         """Generate the mappings used later by self.convert_description()."""
         self.type_mappings = {}
-        for t, s in [(INTEGER,'i'), (LONGINTEGER, 'i'), (NUMBER, 'n'),
-                     (BOOLEAN,'n'), (ROWID, 'i'),
+        for t, s in [(INTEGER, 'i'), (LONGINTEGER, 'i'), (NUMBER, 'n'),
+                     (BOOLEAN, 'n'), (ROWID, 'i'),
                      (DATETIME, 'd'), (DATE, 'd'), (TIME, 'd')]:
             for v in t.values:
                 self.type_mappings[v] = (t, s)
@@ -125,7 +124,7 @@ class DB(TM, dbi_db.DB):
                 'precision': p,
                 'scale': scale,
                 'null': null_ok,
-                })
+            })
         return items
 
     ## tables and rows ##
@@ -153,7 +152,7 @@ class DB(TM, dbi_db.DB):
         self._register()
         c = self.getcursor()
         try:
-            r = c.execute('SELECT * FROM "%s" WHERE 1=0' % table_name)
+            c.execute('SELECT * FROM "%s" WHERE 1=0' % table_name)
         except:
             return ()
         self.putconn()

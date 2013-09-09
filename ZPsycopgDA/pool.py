@@ -42,7 +42,7 @@ class AbstractConnectionPool(object):
 
         self._pool = []
         self._used = {}
-        self._rused = {} # id(conn) -> key map
+        self._rused = {}  # id(conn) -> key map
         self._keys = 0
 
         for i in range(self.minconn):
@@ -65,8 +65,10 @@ class AbstractConnectionPool(object):
 
     def _getconn(self, key=None):
         """Get a free connection and assign it to 'key' if not None."""
-        if self.closed: raise PoolError("connection pool is closed")
-        if key is None: key = self._getkey()
+        if self.closed:
+            raise PoolError("connection pool is closed")
+        if key is None:
+            key = self._getkey()
 
         if key in self._used:
             return self._used[key]
@@ -82,8 +84,10 @@ class AbstractConnectionPool(object):
 
     def _putconn(self, conn, key=None, close=False):
         """Put away a connection."""
-        if self.closed: raise PoolError("connection pool is closed")
-        if key is None: key = self._rused[id(conn)]
+        if self.closed:
+            raise PoolError("connection pool is closed")
+        if key is None:
+            key = self._rused[id(conn)]
 
         if not key:
             raise PoolError("trying to put unkeyed connection")
@@ -106,7 +110,8 @@ class AbstractConnectionPool(object):
         an already closed connection. If you call .closeall() make sure
         your code can deal with it.
         """
-        if self.closed: raise PoolError("connection pool is closed")
+        if self.closed:
+            raise PoolError("connection pool is closed")
         for conn in self._pool + list(self._used.values()):
             try:
                 conn.close()
@@ -151,7 +156,8 @@ class PersistentConnectionPool(AbstractConnectionPool):
         key = self.__thread.get_ident()
         self._lock.acquire()
         try:
-            if not conn: conn = self._used[key]
+            if not conn:
+                conn = self._used[key]
             self._putconn(conn, key, close)
         finally:
             self._lock.release()
@@ -168,15 +174,17 @@ class PersistentConnectionPool(AbstractConnectionPool):
 _connections_pool = {}
 _connections_lock = threading.Lock()
 
+
 def getpool(dsn, create=True):
     _connections_lock.acquire()
     try:
-        if not _connections_pool.has_key(dsn) and create:
+        if dsn not in _connections_pool and create:
             _connections_pool[dsn] = \
                 PersistentConnectionPool(4, 200, dsn)
     finally:
         _connections_lock.release()
     return _connections_pool[dsn]
+
 
 def flushpool(dsn):
     _connections_lock.acquire()
@@ -186,8 +194,10 @@ def flushpool(dsn):
     finally:
         _connections_lock.release()
 
+
 def getconn(dsn, create=True):
     return getpool(dsn, create=create).getconn()
+
 
 def putconn(dsn, conn, close=False):
     getpool(dsn).putconn(conn, close=close)

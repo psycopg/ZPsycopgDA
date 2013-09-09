@@ -20,10 +20,11 @@ __version__ = '2.4.7.dev0'
 
 import DA
 
+
 def initialize(context):
     context.registerClass(
         DA.Connection,
-        permission = 'Add Z Psycopg 2 Database Connections',
-        constructors = (DA.manage_addZPsycopgConnectionForm,
-                        DA.manage_addZPsycopgConnection),
+        permission='Add Z Psycopg 2 Database Connections',
+        constructors=(DA.manage_addZPsycopgConnectionForm,
+                      DA.manage_addZPsycopgConnection),
         icon = 'icons/DBAdapterFolder_icon.gif')

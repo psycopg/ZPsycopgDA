@@ -106,8 +106,8 @@ class DB(TM, dbi_db.DB):
     def make_mappings(self):
         """Generate the mappings used later by self.convert_description()."""
         self.type_mappings = {}
-        for t, s in [(INTEGER,'i'), (LONGINTEGER, 'i'), (NUMBER, 'n'),
-                     (BOOLEAN,'n'), (ROWID, 'i'),
+        for t, s in [(INTEGER, 'i'), (LONGINTEGER, 'i'), (NUMBER, 'n'),
+                     (BOOLEAN, 'n'), (ROWID, 'i'),
                      (DATETIME, 'd'), (DATE, 'd'), (TIME, 'd')]:
             for v in t.values:
                 self.type_mappings[v] = (t, s)

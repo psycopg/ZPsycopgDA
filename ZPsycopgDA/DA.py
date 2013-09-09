@@ -67,10 +67,10 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
     """ZPsycopg Connection."""
     _isAnSQLConnection = 1
 
-    id                = 'Psycopg2_database_connection'
-    database_type     = 'Psycopg2'
+    id = 'Psycopg2_database_connection'
+    database_type = 'Psycopg2'
     meta_type = title = 'Z Psycopg 2 Database Connection'
-    icon              = 'misc_/conn'
+    icon = 'misc_/conn'
 
     def __init__(self, id, title, connection_string,
                  zdatetime, check=None, tilevel=DEFAULT_TILEVEL,
@@ -106,7 +106,7 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
                   check=check, tilevel=tilevel, encoding=encoding)
         if REQUEST is not None:
             msg = "Connection edited."
-            return self.manage_main(self,REQUEST,manage_tabs_message=msg)
+            return self.manage_main(self, REQUEST, manage_tabs_message=msg)
 
     def connect(self, s):
         try:
@@ -189,7 +189,7 @@ def check_psycopg_version(version):
     if tver < (2, 4):
         raise ImportError("psycopg version %s is too old" % version)
 
-    if tver in ((2,4,2), (2,4,3)):
+    if tver in ((2, 4, 2), (2, 4, 3)):
         raise ImportError("psycopg version %s is known to be buggy" % version)
 
 
@@ -197,8 +197,8 @@ def check_psycopg_version(version):
 
 classes = (Connection,)
 
-meta_types = ({'name':'Z Psycopg 2 Database Connection',
-               'action':'manage_addZPsycopgConnectionForm'},)
+meta_types = ({'name': 'Z Psycopg 2 Database Connection',
+               'action': 'manage_addZPsycopgConnectionForm'},)
 
 folder_methods = {
     'manage_addZPsycopgConnection': manage_addZPsycopgConnection,
@@ -210,7 +210,7 @@ __ac_permissions__ = (
 
 # add icons
 
-misc_={'conn': ImageFile('icons/DBAdapterFolder_icon.gif', globals())}
+misc_ = {'conn': ImageFile('icons/DBAdapterFolder_icon.gif', globals())}
 
 for icon in ('table', 'view', 'stable', 'what', 'field', 'text', 'bin',
              'int', 'float', 'date', 'time', 'datetime'):
@@ -301,16 +301,16 @@ class TableBrowser(Browser, Acquisition.Implicit):
         return v
 
     def tpValues_(self):
-        r=[]
-        tname=self.__name__
+        r = []
+        tname = self.__name__
         for d in self._c.columns(tname):
-            b=ColumnBrowser()
-            b._d=d
+            b = ColumnBrowser()
+            b._d = d
             try:
-                b.icon=field_icons[d['Type']]
+                b.icon = field_icons[d['Type']]
             except:
                 pass
-            b.TABLE_NAME=tname
+            b.TABLE_NAME = tname
             r.append(b)
         return r
 
@@ -326,7 +326,7 @@ class TableBrowser(Browser, Acquisition.Implicit):
     def Type(self):
         return self._d['TABLE_TYPE']
 
-    manage_designInput=HTMLFile('designInput',globals())
+    manage_designInput = HTMLFile('designInput', globals())
 
     @staticmethod
     def vartype(inVar):
@@ -338,33 +338,33 @@ class TableBrowser(Browser, Acquisition.Implicit):
 
     def manage_buildInput(self, id, source, default, REQUEST=None):
         "Create a database method for an input form"
-        args=[]
-        values=[]
-        names=[]
-        columns=self._columns
+        args = []
+        values = []
+        names = []
+        columns = self._columns
         for i in range(len(source)):
-            s=source[i]
-            if s=='Null':
+            s = source[i]
+            if s == 'Null':
                 continue
-            c=columns[i]
-            d=default[i]
-            t=c['Type']
-            n=c['Name']
+            c = columns[i]
+            d = default[i]
+            t = c['Type']
+            n = c['Name']
             names.append(n)
-            if s=='Argument':
+            if s == 'Argument':
                 values.append("<dtml-sqlvar %s type=%s>'" %
                               (n, self.vartype(t)))
-                a='%s%s' % (n, self.vartype(t).title())
+                a = '%s%s' % (n, self.vartype(t).title())
                 if d:
-                    a="%s=%s" % (a,d)
+                    a = "%s=%s" % (a, d)
                 args.append(a)
-            elif s=='Property':
+            elif s == 'Property':
                 values.append("<dtml-sqlvar %s type=%s>'" %
                               (n, self.vartype(t)))
             else:
                 if isinstance(t, basestring):
                     if d.find("\'") >= 0:
-                        d="''".join(d.split("\'"))
+                        d = "''".join(d.split("\'"))
                     values.append("'%s'" % d)
                 elif d:
                     values.append(str(d))
@@ -374,7 +374,7 @@ class TableBrowser(Browser, Acquisition.Implicit):
 
 
 class ColumnBrowser(Browser):
-    icon='field'
+    icon = 'field'
 
     def check(self):
         return ('\t<input type=checkbox name="%s.%s">' %
@@ -387,19 +387,19 @@ class ColumnBrowser(Browser):
         return "Column/%s" % self._d['Name']
 
     def Description(self):
-        d=self._d
+        d = self._d
         if d['Scale']:
             return " %(Type)s(%(Precision)s,%(Scale)s) %(Nullable)s" % d
         else:
             return " %(Type)s(%(Precision)s) %(Nullable)s" % d
 
-table_icons={
+table_icons = {
     'TABLE': 'table',
-    'VIEW':'view',
+    'VIEW': 'view',
     'SYSTEM_TABLE': 'stable',
 }
 
-field_icons={
+field_icons = {
     NUMBER.name: 'i',
     STRING.name: 'text',
     DATETIME.name: 'date',

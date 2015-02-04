@@ -45,7 +45,6 @@ setup(
     license='GPL with exceptions or ZPL',
     packages=['ZPsycopgDA'],
     package_dir={'': '.'},
-    namespace_packages=['ZPsycopgDA'],
     package_data={'ZPsycopgDA': ['dtml/*', 'icons/*']},
     zip_safe=False,
     install_requires=[

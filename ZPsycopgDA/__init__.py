@@ -14,17 +14,23 @@
 
 # Import modules needed by _psycopg to allow tools like py2exe to do
 # their work without bothering about the module dependencies.
-
 __doc__ = "ZPsycopg Database Adapter Registration."
-__version__ = '2.4.7.dev1'
+__version__ = '2.4.6'
 
-import DA
+try:
+    import pkg_resources
+    pkg_resources.declare_namespace(__name__)
 
 
-def initialize(context):
-    context.registerClass(
-        DA.Connection,
-        permission='Add Z Psycopg 2 Database Connections',
-        constructors=(DA.manage_addZPsycopgConnectionForm,
-                      DA.manage_addZPsycopgConnection),
-        icon = 'icons/DBAdapterFolder_icon.gif')
+    import DA
+
+    def initialize(context):
+        context.registerClass(
+            DA.Connection,
+            permission = 'Add Z Psycopg 2 Database Connections',
+            constructors = (DA.manage_addZPsycopgConnectionForm,
+                            DA.manage_addZPsycopgConnection),
+            icon = 'icons/DBAdapterFolder_icon.gif')
+except ImportError:
+    import pkgutil
+    __path__ = pkgutil.extend_path(__path__, __name__)

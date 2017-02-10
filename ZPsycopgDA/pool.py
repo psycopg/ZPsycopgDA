@@ -22,11 +22,21 @@ import threading
 import psycopg2
 from psycopg2.pool import PoolError
 
+# Patch JJ 2016-05-05: The register_type method is needed because
+# typecasts registration should happen directly after
+# psycopg2.connect().
+from psycopg2.extensions import register_type
+
+from logging import getLogger
+LOG = getLogger('ZPsycopgDA.pool')
+
 
 class AbstractConnectionPool(object):
     """Generic key-based pooling code."""
 
-    def __init__(self, minconn, maxconn, *args, **kwargs):
+    def __init__(self, minconn, maxconn, args,
+                 key=None, tilevel=None, encoding=None, typecasts=None,
+                 **kwargs):
         """Initialize the connection pool.
 
         New 'minconn' connections are created immediately calling 'connfunc'
@@ -37,6 +47,19 @@ class AbstractConnectionPool(object):
         self.maxconn = maxconn
         self.closed = False
 
+        # Patch JJ 2016-05-05: The "key" is added to provide a better
+        # identifier for the connection pool. Otherwise, connectors
+        # with same dsn but different transaction isolation end up
+        # using the same connections. Plus, this object needs to know
+        # the transaction isolation level, the encoding and the
+        # typecasts, because it is here that the psycopg2.connect()
+        # call is issued. The tilevel, encoding and casts should be
+        # initialized right away.
+        self.key = key
+        self.tilevel = tilevel
+        self.encoding = encoding
+        self.typecasts = typecasts
+        
         self._args = args
         self._kwargs = kwargs
 
@@ -50,7 +73,29 @@ class AbstractConnectionPool(object):
 
     def _connect(self, key=None):
         """Create a new connection and assign it to 'key' if not None."""
-        conn = psycopg2.connect(*self._args, **self._kwargs)
+        # Patch JJ 2016-11-03: Connect to the database (when it is ready)
+        retries = 300 # Magic number
+        while True:
+            try:
+                conn = psycopg2.connect(*self._args, **self._kwargs)
+                break
+            except psycopg2.OperationalError:
+                LOG.warning('Connect failed. Retries: %d' % retries)
+                retries -= 1
+                if retries == 0:
+                    raise
+                # DANGER: time.sleep() does not play well in multithreading.
+                #import time
+                #time.sleep(0.5) # Magic number
+                
+        # Patch JJ 2016-05-05: This is the moment to set the correct
+        # transaction isolation level, encoding, and types.
+        if self.tilevel:  conn.set_session(isolation_level=int(self.tilevel))
+        if self.encoding: conn.set_client_encoding(self.encoding)
+        if self.typecasts:
+            for tc in self.typecasts:
+                register_type(tc, conn)
+        
         if key is not None:
             self._used[key] = conn
             self._rused[id(conn)] = key
@@ -93,7 +138,13 @@ class AbstractConnectionPool(object):
             raise PoolError("trying to put unkeyed connection")
 
         if len(self._pool) < self.minconn and not close:
-            self._pool.append(conn)
+            if conn not in self._pool:
+                # LOG.info('Appending connection to _pool')
+                self._pool.append(conn)
+            #if conn in self._pool:
+            #    LOG.info('Removing connection from _pool')
+            #    self._pool.remove(conn)
+                
         else:
             conn.close()
 
@@ -134,7 +185,12 @@ class PersistentConnectionPool(AbstractConnectionPool):
         """Initialize the threading lock."""
         import threading
         AbstractConnectionPool.__init__(
-            self, minconn, maxconn, *args, **kwargs)
+            # Patch JJ 2016-05-05: XXX This is ugly, sorry I could not
+            # come up with anything better. Because the arguments list
+            # of the __init__() method has changed, we cannot pass
+            # *args anymore. We pass an argument called "args"
+            # instead.
+            self, minconn, maxconn, args=args, **kwargs)
         self._lock = threading.Lock()
 
         # we we'll need the thread module, to determine thread ids, so we
@@ -142,18 +198,18 @@ class PersistentConnectionPool(AbstractConnectionPool):
         import thread
         self.__thread = thread
 
-    def getconn(self):
+    def getconn(self, key=None):
         """Generate thread id and return a connection."""
-        key = self.__thread.get_ident()
+        if key is None: key = self.__thread.get_ident()
         self._lock.acquire()
         try:
             return self._getconn(key)
         finally:
             self._lock.release()
 
-    def putconn(self, conn=None, close=False):
+    def putconn(self, conn=None, close=False, key=None):
         """Put away an unused connection."""
-        key = self.__thread.get_ident()
+        if key is None: key = self.__thread.get_ident()
         self._lock.acquire()
         try:
             if not conn:
@@ -174,30 +230,50 @@ class PersistentConnectionPool(AbstractConnectionPool):
 _connections_pool = {}
 _connections_lock = threading.Lock()
 
-
-def getpool(dsn, create=True):
+# Patch JJ 2016-05-05: All global routines received 4 additional
+# arguments: key (for identifiying the pool more precisely than by the
+# dsn alone), tilevel, encoding, typecasts (for properly initializing
+# the connections).
+def getpool(dsn, create=True,
+            key=None, tilevel=None,
+            encoding=None, typecasts=None):
+    key = key or dsn
     _connections_lock.acquire()
     try:
-        if dsn not in _connections_pool and create:
-            _connections_pool[dsn] = \
-                PersistentConnectionPool(4, 200, dsn)
+        if not _connections_pool.has_key(key) and create:
+            _connections_pool[key] = \
+                PersistentConnectionPool(4, 200, dsn,
+                                         # Patch JJ 2016-05-05: Additional args.
+                                         key=key, tilevel=tilevel, encoding=encoding, typecasts=typecasts)
     finally:
         _connections_lock.release()
-    return _connections_pool[dsn]
+    return _connections_pool[key]
 
-
-def flushpool(dsn):
+# Patch JJ 2016-05-05: Additional args.
+def flushpool(dsn,
+              key=None, tilevel=None,
+              encoding=None, typecasts=None):
+    key = key or dsn
     _connections_lock.acquire()
     try:
-        _connections_pool[dsn].closeall()
-        del _connections_pool[dsn]
+        _connections_pool[key].closeall()
+        del _connections_pool[key]
     finally:
         _connections_lock.release()
 
+# Patch JJ 2016-05-05: Additional args.
+def getconn(dsn, create=True,
+            key=None, tilevel=None,
+            encoding=None, typecasts=None):
+    return getpool(dsn, create=create,
+                   # Patch JJ 2016-05-05: Additional args.
+                   key=key, tilevel=tilevel, encoding=encoding, typecasts=typecasts).getconn()
 
-def getconn(dsn, create=True):
-    return getpool(dsn, create=create).getconn()
-
-
-def putconn(dsn, conn, close=False):
-    getpool(dsn).putconn(conn, close=close)
+# Patch JJ 2016-05-05: Additional args.
+def putconn(dsn, conn, close=False,
+            key=None, tilevel=None,
+            encoding=None, typecasts=None):
+    getpool(dsn,
+            # Patch JJ 2016-05-05: Additional args.
+            key=key, tilevel=tilevel, encoding=encoding, typecasts=typecasts
+    ).putconn(conn, close=close)

@@ -39,9 +39,9 @@ except ImportError:
 
 import psycopg2
 from psycopg2 import NUMBER, STRING, ROWID, DATETIME
-from psycopg2.extensions import INTEGER, FLOAT, BOOLEAN, DATE
-from psycopg2.extensions import TIME
-from psycopg2.extensions import new_type
+from psycopg2.extensions import INTEGER, LONGINTEGER, FLOAT, BOOLEAN, DATE
+from psycopg2.extensions import TIME, INTERVAL
+from psycopg2.extensions import new_type, register_type
 
 import psycopg2.extensions
 DEFAULT_TILEVEL = psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ
@@ -53,10 +53,12 @@ manage_addZPsycopgConnectionForm = HTMLFile('dtml/add', globals())
 
 def manage_addZPsycopgConnection(self, id, title, connection_string,
                                  zdatetime=None, tilevel=DEFAULT_TILEVEL,
-                                 encoding='', check=None, REQUEST=None):
+                                 encoding='', check=None,
+                                 autocommit=None, REQUEST=None):
     """Add a DB connection to a folder."""
     self._setObject(id, Connection(id, title, connection_string,
-                                   zdatetime, check, tilevel, encoding))
+                                   zdatetime, check, tilevel, encoding,
+                                   autocommit))
     if REQUEST is not None:
         return self.manage_main(self, REQUEST)
 
@@ -74,11 +76,13 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
 
     def __init__(self, id, title, connection_string,
                  zdatetime, check=None, tilevel=DEFAULT_TILEVEL,
-                 encoding='UTF-8'):
+                 encoding='UTF-8',
+                 autocommit=False):
         self.zdatetime = zdatetime
         self.id = str(id)
         self.edit(title, connection_string, zdatetime,
-                  check=check, tilevel=tilevel, encoding=encoding)
+                  check=check, tilevel=tilevel, encoding=encoding,
+                  autocommit=autocommit)
 
     def factory(self):
         return DB
@@ -86,12 +90,14 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
     ## connection parameters editing ##
 
     def edit(self, title, connection_string,
-             zdatetime, check=None, tilevel=DEFAULT_TILEVEL, encoding='UTF-8'):
+             zdatetime, check=None, tilevel=DEFAULT_TILEVEL, encoding='UTF-8',
+             autocommit=False):
         self.title = title
         self.connection_string = connection_string
         self.zdatetime = zdatetime
         self.tilevel = tilevel
         self.encoding = encoding
+        self.autocommit = autocommit
 
         if check:
             self.connect(self.connection_string)
@@ -100,10 +106,13 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
 
     def manage_edit(self, title, connection_string,
                     zdatetime=None, check=None, tilevel=DEFAULT_TILEVEL,
-                    encoding='UTF-8', REQUEST=None):
+                    encoding='UTF-8',
+                    autocommit=False,
+                    REQUEST=None):
         """Edit the DB connection."""
         self.edit(title, connection_string, zdatetime,
-                  check=check, tilevel=tilevel, encoding=encoding)
+                  check=check, tilevel=tilevel, encoding=encoding,
+                  autocommit=autocommit)
         if REQUEST is not None:
             msg = "Connection edited."
             return self.manage_main(self, REQUEST, manage_tabs_message=msg)
@@ -122,7 +131,8 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
 
         # TODO: let the psycopg exception propagate, or not?
         self._v_database_connection = dbf(
-            self.connection_string, self.tilevel, self.get_type_casts(), self.encoding)
+            self.connection_string, self.tilevel, self.get_type_casts(),
+            self.encoding, self.autocommit)
         self._v_database_connection.open()
         self._v_connected = DateTime()
 

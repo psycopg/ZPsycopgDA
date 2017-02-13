@@ -129,6 +129,13 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
         self._v_connected = ''
         dbf = self.factory()
 
+        # Safety catch for migrations from systems without autocommit
+        # feature:
+        try:
+            self.autocommit
+        except AttributeError:
+            self.autocommit = False
+
         # TODO: let the psycopg exception propagate, or not?
         self._v_database_connection = dbf(
             self.connection_string, self.tilevel, self.get_type_casts(),

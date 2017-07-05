@@ -26,6 +26,8 @@ ZPsycopgDA depends on the psycopg2 module version at least 2.4. Don't use
 versions 2.4.2 or 2.4.3: they are not compatible with ZPsycopgDA. Install the
 latest version available.
 
+ZPsycopgDA also depends on Products.ZSQLMethods.
+
 
 Installation
 ------------
@@ -49,3 +51,16 @@ approximative. Please contact us if you want to improve them.
 - Alternatively run ``easy_install ZPsycopgDA`` or ``pip install ZPsycopgDA``,
   then symlink or copy the ``ZPsycopgDA`` directory from the installed
   location to the ``Products`` directory of your Zope instance.
+
+
+Detailed Installation for Zope 4.0
+----------------------------------
+
+Install Zope using virtualenv: http://zope.readthedocs.io/en/latest/INSTALL-virtualenv.html
+
+    $ cd /path/to/virtualenv
+    $ ./bin/pip install psycopg2
+    $ ./bin/pip install git+https://github.com/zopefoundation/Products.ZSQLMethods.git
+    $ ./bin/pip install git+https://github.com/psycopg/ZPsycopgDA.git
+    $ cd lib/python2.7/site-packages/Products
+    $ ln -s /path/to/virtualenv/lib/python2.7/site-packages/ZPsycopgDA .

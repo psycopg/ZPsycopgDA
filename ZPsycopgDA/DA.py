@@ -23,7 +23,7 @@ import Acquisition
 import Shared.DC.ZRDB.Connection
 
 from db import DB
-from Globals import HTMLFile
+from App.special_dtml import HTMLFile
 from ExtensionClass import Base
 from DateTime import DateTime
 

@@ -25,7 +25,7 @@ import pool
 import psycopg2
 from psycopg2.extensions import INTEGER, LONGINTEGER, FLOAT, BOOLEAN, DATE, TIME
 from psycopg2.extensions import TransactionRollbackError, register_type
-from psycopg2 import NUMBER, STRING, ROWID, DATETIME 
+from psycopg2 import NUMBER, STRING, ROWID, DATETIME
 
 from logging import getLogger
 LOG = getLogger('ZPsycopgDA.db')
@@ -46,7 +46,7 @@ class DB(TM, dbi_db.DB):
         # errors. We need a better key, consisting of all
         # variables. This key will be used by pool.py
         self.key = str((dsn, tilevel, enc, typecasts))
-        
+
         self.tilevel = tilevel
         self.typecasts = typecasts
         if enc is None or enc == "":
@@ -59,7 +59,7 @@ class DB(TM, dbi_db.DB):
         # Patch JJ 2017-01-27: Add an autocommit feature which commits
         # every query in this instance
         self.autocommit = autocommit
-        
+
         self.make_mappings()
 
     def getconn(self, init=True):
@@ -78,7 +78,7 @@ class DB(TM, dbi_db.DB):
                 if retries == 0:
                     raise
         return conn
-    
+
     def getconn_inner(self, init=True):
         # if init is False we are trying to get hold on an already existing
         # connection, so we avoid to (re)initialize it risking errors.
@@ -88,7 +88,7 @@ class DB(TM, dbi_db.DB):
         conn = pool.getconn(self.dsn,
                             key=self.key, tilevel=self.tilevel,
                             encoding=self.encoding, typecasts=self.typecasts)
-        
+
         if init:
             # Patch JJ 2014-05-27: Make sure you begin a new
             # transaction.
@@ -97,7 +97,7 @@ class DB(TM, dbi_db.DB):
             if tainted: conn.rollback()
             else:       conn.commit()
             self.rollback_tainted = False
-            
+
             # use set_session where available as in these versions
             # set_isolation_level generates an extra query.
             if psycopg2.__version__ >= '2.4.2':
@@ -156,13 +156,13 @@ class DB(TM, dbi_db.DB):
 
             if tainted:
                 raise StandardError, "Tainted connection needs to be rolled back."
-            
+
         except AttributeError:
             pass
-        
+
     def _finish(self, *ignored):
         self._commit(put_connection=True)
-            
+
     def _abort(self, *ignored):
         # Patch JJ 2014-05-23: Rollbacks early in the transaction
         # result in all other queries processing without error, even
@@ -200,7 +200,7 @@ class DB(TM, dbi_db.DB):
     def close(self):
         # FIXME: if this connection is closed we flush all the pool associated
         # with the current DSN; does this makes sense?
-        
+
         # Patch JJ 2016-05-05: The pool needs to know the tilevel,
         # encoding and typecasts as well.
         pool.flushpool(self.dsn,
@@ -311,6 +311,10 @@ class DB(TM, dbi_db.DB):
                             #LOG.debug("Something went wrong when we tried to close the pool", exc_info=True)
                             pass
 
+                        # JJ 2017-08-07: Do not retry canceled queries
+                        if repr(err).startswith('QueryCanceledError'):
+                            retries = 0
+
                         # Patch JJ 2016-11-03: And immediately reopen it
                         if retries:
                             LOG.warning("Reopening the connection, retries: %d" % retries)
@@ -318,7 +322,7 @@ class DB(TM, dbi_db.DB):
                             self.getconn(True)
                             c = self.getcursor()
                             continue
-                        
+
                         # Patch JJ 2014-05-23: Operational errors should
                         # not be muted! This masks transaction rollbacks
                         # in a very ugly way. Instead, raise the error.
@@ -332,10 +336,26 @@ class DB(TM, dbi_db.DB):
                                 'multiple selects in single query not allowed')
                         if max_rows:
                             res = c.fetchmany(max_rows)
+                            # JJ 2017-07-20: Danger ahead. We might
+                            # have many more rows in the database,
+                            # which are truncated by max_rows. In that
+                            # case, we should be able to react, by
+                            # raising or logging.
+                            if len(res) == max_rows:
+                                try:
+                                    overshoot_result = c.fetchone()
+                                except:
+                                    overshoot_result = None
+                                if overshoot_result:
+                                    assert False, (
+                                        "This query has returned more than "
+                                        "max_rows results. Please raise "
+                                        "max_rows or limit in SQL.")
+
                         else:
                             res = c.fetchall()
                         desc = c.description
-                    
+
                     # No retries on subsequent queries
                     retries = 0
                     break

@@ -37,7 +37,7 @@ class DB(TM, dbi_db.DB):
     _p_oid = _p_changed = _registered = None
 
     def __init__(self, dsn, tilevel, typecasts, enc='utf-8',
-                 autocommit=False):
+                 autocommit=False, physical_path=''):
         self.dsn = dsn
 
         # Patch JJ 2016-05-05: Using the dsn as a key for connection
@@ -45,7 +45,8 @@ class DB(TM, dbi_db.DB):
         # isolation levels, leading to very confusing and dangerous
         # errors. We need a better key, consisting of all
         # variables. This key will be used by pool.py
-        self.key = str((dsn, tilevel, enc, typecasts))
+        #self.key = str((dsn, tilevel, enc, typecasts))
+        self.key = physical_path or str((dsn, tilevel, enc, typecasts))
 
         self.tilevel = tilevel
         self.typecasts = typecasts

@@ -136,10 +136,17 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
         except AttributeError:
             self.autocommit = False
 
+        if len(self.getPhysicalPath()) == 1:
+            # We do not have our physical path (yet)
+            # But we need the path to uniquely identify the connection!
+            # So, we raise a really ugly error here.
+            assert False, "No physical path available yet"
+        physical_path = ('/'.join(self.getPhysicalPath()))
+
         # TODO: let the psycopg exception propagate, or not?
         self._v_database_connection = dbf(
             self.connection_string, self.tilevel, self.get_type_casts(),
-            self.encoding, self.autocommit)
+            self.encoding, self.autocommit, physical_path)
         self._v_database_connection.open()
         self._v_connected = DateTime()
 

@@ -37,7 +37,7 @@ class DB(TM, dbi_db.DB):
     _p_oid = _p_changed = _registered = None
 
     def __init__(self, dsn, tilevel, typecasts, enc='utf-8',
-                 autocommit=False, physical_path=''):
+                 autocommit=False, readonlymode=False, physical_path=''):
         self.dsn = dsn
 
         # Patch JJ 2016-05-05: Using the dsn as a key for connection
@@ -45,8 +45,8 @@ class DB(TM, dbi_db.DB):
         # isolation levels, leading to very confusing and dangerous
         # errors. We need a better key, consisting of all
         # variables. This key will be used by pool.py
-        #self.key = str((dsn, tilevel, enc, typecasts))
-        self.key = physical_path or str((dsn, tilevel, enc, typecasts))
+        self.key = (physical_path or
+                    str((dsn, tilevel, enc, typecasts, autocommit, readonlymode)))
 
         self.tilevel = tilevel
         self.typecasts = typecasts
@@ -60,6 +60,9 @@ class DB(TM, dbi_db.DB):
         # Patch JJ 2017-01-27: Add an autocommit feature which commits
         # every query in this instance
         self.autocommit = autocommit
+
+        # Patch JJ 2017-09-26: Add read-only mode
+        self.readonlymode = readonlymode
 
         self.make_mappings()
 
@@ -88,6 +91,7 @@ class DB(TM, dbi_db.DB):
         # encoding and typecasts as well.
         conn = pool.getconn(self.dsn,
                             key=self.key, tilevel=self.tilevel,
+                            readonlymode=self.readonlymode,
                             encoding=self.encoding, typecasts=self.typecasts)
 
         if init:
@@ -102,7 +106,8 @@ class DB(TM, dbi_db.DB):
             # use set_session where available as in these versions
             # set_isolation_level generates an extra query.
             if psycopg2.__version__ >= '2.4.2':
-                conn.set_session(isolation_level=int(self.tilevel))
+                conn.set_session(isolation_level=int(self.tilevel),
+                                 readonly=bool(self.readonlymode))
             else:
                 conn.set_isolation_level(int(self.tilevel))
             conn.set_client_encoding(self.encoding)
@@ -116,6 +121,7 @@ class DB(TM, dbi_db.DB):
             # encoding and typecasts as well.
             conn = pool.getconn(self.dsn, False,
                                 key=self.key, tilevel=self.tilevel,
+                                readonlymode=self.readonlymode,
                                 encoding=self.encoding, typecasts=self.typecasts)
         except AttributeError:
             pass
@@ -123,6 +129,7 @@ class DB(TM, dbi_db.DB):
         # encoding and typecasts as well.
         pool.putconn(self.dsn, conn, close,
                      key=self.key, tilevel=self.tilevel,
+                     readonlymode=self.readonlymode,
                      encoding=self.encoding, typecasts=self.typecasts)
 
     def getcursor(self):
@@ -206,6 +213,7 @@ class DB(TM, dbi_db.DB):
         # encoding and typecasts as well.
         pool.flushpool(self.dsn,
                        key=self.key, tilevel=self.tilevel,
+                       readonlymode=self.readonlymode,
                        encoding=self.encoding, typecasts=self.typecasts)
 
     def sortKey(self):

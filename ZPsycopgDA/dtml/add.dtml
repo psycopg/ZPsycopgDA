@@ -98,6 +98,16 @@ or DSN for short) is a string... (TODO: finish docs)
   <tr>
     <td align="left" valign="top">
     <div class="form-label">
+    Read-only mode
+    </div>
+    </td>
+    <td align="left" valign="top">
+    <input type="checkbox" name="readonlymode" value="YES" />
+    </td>
+  </tr>
+  <tr>
+    <td align="left" valign="top">
+    <div class="form-label">
     Encoding
     </div>
     </td>

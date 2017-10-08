@@ -73,6 +73,17 @@
   <tr>
     <td align="left" valign="top">
     <div class="form-label">
+    Read-only mode
+    </div>
+    </td>
+    <td align="left" valign="top">
+    <input type="checkbox" name="readonlymode" value="YES"
+      <dtml-if readonlymode>checked="YES"</dtml-if> />
+    </td>
+  </tr>
+  <tr>
+    <td align="left" valign="top">
+    <div class="form-label">
     Encoding
     </div>
     </td>

@@ -54,11 +54,13 @@ manage_addZPsycopgConnectionForm = HTMLFile('dtml/add', globals())
 def manage_addZPsycopgConnection(self, id, title, connection_string,
                                  zdatetime=None, tilevel=DEFAULT_TILEVEL,
                                  encoding='', check=None,
-                                 autocommit=None, REQUEST=None):
+                                 autocommit=None,
+                                 readonlymode=None,
+                                 REQUEST=None):
     """Add a DB connection to a folder."""
     self._setObject(id, Connection(id, title, connection_string,
                                    zdatetime, check, tilevel, encoding,
-                                   autocommit))
+                                   autocommit, readonlymode))
     if REQUEST is not None:
         return self.manage_main(self, REQUEST)
 
@@ -77,12 +79,12 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
     def __init__(self, id, title, connection_string,
                  zdatetime, check=None, tilevel=DEFAULT_TILEVEL,
                  encoding='UTF-8',
-                 autocommit=False):
+                 autocommit=False, readonlymode=False):
         self.zdatetime = zdatetime
         self.id = str(id)
         self.edit(title, connection_string, zdatetime,
                   check=check, tilevel=tilevel, encoding=encoding,
-                  autocommit=autocommit)
+                  autocommit=autocommit, readonlymode=readonlymode)
 
     def factory(self):
         return DB
@@ -91,13 +93,14 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
 
     def edit(self, title, connection_string,
              zdatetime, check=None, tilevel=DEFAULT_TILEVEL, encoding='UTF-8',
-             autocommit=False):
+             autocommit=False, readonlymode=False):
         self.title = title
         self.connection_string = connection_string
         self.zdatetime = zdatetime
         self.tilevel = tilevel
         self.encoding = encoding
         self.autocommit = autocommit
+        self.readonlymode = readonlymode
 
         if check:
             self.connect(self.connection_string)
@@ -108,11 +111,12 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
                     zdatetime=None, check=None, tilevel=DEFAULT_TILEVEL,
                     encoding='UTF-8',
                     autocommit=False,
+                    readonlymode=False,
                     REQUEST=None):
         """Edit the DB connection."""
         self.edit(title, connection_string, zdatetime,
                   check=check, tilevel=tilevel, encoding=encoding,
-                  autocommit=autocommit)
+                  autocommit=autocommit, readonlymode=readonlymode)
         if REQUEST is not None:
             msg = "Connection edited."
             return self.manage_main(self, REQUEST, manage_tabs_message=msg)
@@ -130,11 +134,15 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
         dbf = self.factory()
 
         # Safety catch for migrations from systems without autocommit
-        # feature:
+        # or readonly feature:
         try:
             self.autocommit
         except AttributeError:
             self.autocommit = False
+        try:
+            self.readonlymode
+        except AttributeError:
+            self.readonlymode = False
 
         if len(self.getPhysicalPath()) == 1:
             # We do not have our physical path (yet)
@@ -146,7 +154,7 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
         # TODO: let the psycopg exception propagate, or not?
         self._v_database_connection = dbf(
             self.connection_string, self.tilevel, self.get_type_casts(),
-            self.encoding, self.autocommit, physical_path)
+            self.encoding, self.autocommit, self.readonlymode, physical_path)
         self._v_database_connection.open()
         self._v_connected = DateTime()
 

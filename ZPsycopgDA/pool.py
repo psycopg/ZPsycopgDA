@@ -35,7 +35,9 @@ class AbstractConnectionPool(object):
     """Generic key-based pooling code."""
 
     def __init__(self, minconn, maxconn, args,
-                 key=None, tilevel=None, encoding=None, typecasts=None,
+                 key=None, tilevel=None,
+                 readonlymode=False,
+                 encoding=None, typecasts=None,
                  **kwargs):
         """Initialize the connection pool.
 
@@ -57,6 +59,7 @@ class AbstractConnectionPool(object):
         # initialized right away.
         self.key = key
         self.tilevel = tilevel
+        self.readonlymode = readonlymode
         self.encoding = encoding
         self.typecasts = typecasts
         
@@ -90,7 +93,8 @@ class AbstractConnectionPool(object):
                 
         # Patch JJ 2016-05-05: This is the moment to set the correct
         # transaction isolation level, encoding, and types.
-        if self.tilevel:  conn.set_session(isolation_level=int(self.tilevel))
+        if self.tilevel:  conn.set_session(isolation_level=int(self.tilevel),
+                                           readonly=bool(self.readonlymode))
         if self.encoding: conn.set_client_encoding(self.encoding)
         if self.typecasts:
             for tc in self.typecasts:
@@ -236,6 +240,7 @@ _connections_lock = threading.Lock()
 # the connections).
 def getpool(dsn, create=True,
             key=None, tilevel=None,
+            readonlymode=False,
             encoding=None, typecasts=None):
     key = key or dsn
     _connections_lock.acquire()
@@ -244,7 +249,9 @@ def getpool(dsn, create=True,
             _connections_pool[key] = \
                 PersistentConnectionPool(4, 200, dsn,
                                          # Patch JJ 2016-05-05: Additional args.
-                                         key=key, tilevel=tilevel, encoding=encoding, typecasts=typecasts)
+                                         key=key, tilevel=tilevel,
+                                         readonlymode=readonlymode,
+                                         encoding=encoding, typecasts=typecasts)
     finally:
         _connections_lock.release()
     return _connections_pool[key]
@@ -252,6 +259,7 @@ def getpool(dsn, create=True,
 # Patch JJ 2016-05-05: Additional args.
 def flushpool(dsn,
               key=None, tilevel=None,
+              readonlymode=False,
               encoding=None, typecasts=None):
     key = key or dsn
     _connections_lock.acquire()
@@ -264,16 +272,22 @@ def flushpool(dsn,
 # Patch JJ 2016-05-05: Additional args.
 def getconn(dsn, create=True,
             key=None, tilevel=None,
+            readonlymode=False,
             encoding=None, typecasts=None):
     return getpool(dsn, create=create,
                    # Patch JJ 2016-05-05: Additional args.
-                   key=key, tilevel=tilevel, encoding=encoding, typecasts=typecasts).getconn()
+                   key=key, tilevel=tilevel,
+                   readonlymode=readonlymode,
+                   encoding=encoding, typecasts=typecasts).getconn()
 
 # Patch JJ 2016-05-05: Additional args.
 def putconn(dsn, conn, close=False,
             key=None, tilevel=None,
+            readonlymode=False,
             encoding=None, typecasts=None):
     getpool(dsn,
             # Patch JJ 2016-05-05: Additional args.
-            key=key, tilevel=tilevel, encoding=encoding, typecasts=typecasts
+            key=key, tilevel=tilevel,
+            readonlymode=readonlymode,
+            encoding=encoding, typecasts=typecasts
     ).putconn(conn, close=close)

@@ -1,17 +1,5 @@
 from setuptools import setup
 
-# Get the version number from the package
-f = open('ZPsycopgDA/__init__.py')
-try:
-    for line in f:
-        if line.startswith('__version__'):
-            version = line.split()[-1].replace("'", "")
-            break
-    else:
-        raise ValueError('__version__ not found')
-finally:
-    f.close()
-
 long_description = (
     open('README.rst').read()
     + '\n' +
@@ -26,7 +14,7 @@ long_description = (
 
 setup(
     name='ZPsycopgDA',
-    version=version,
+    version='3.0',
     description="Zope bindings for psycopg2.",
     long_description=long_description,
     # Get more strings from
@@ -43,10 +31,12 @@ setup(
     author_email='fog@initd.org',
     url='http://initd.org/psycopg/',
     license='GPL with exceptions or ZPL',
-    packages=['ZPsycopgDA'],
+    packages=['Products'],
     package_dir={'': '.'},
-    package_data={'ZPsycopgDA': ['dtml/*', 'icons/*']},
+    include_package_data = True,
+    #package_data={'ZPsycopgDA': ['dtml/*', 'icons/*']},
     zip_safe=False,
+    namespace_packages=['Products'],
     install_requires=[
         'setuptools',
         # -*- Extra requirements: -*-

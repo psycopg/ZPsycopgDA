@@ -13,7 +13,7 @@ long_description = (
 )
 
 setup(
-    name='ZPsycopgDA',
+    name='Products.ZPsycopgDA',
     version='3.0',
     description="Zope bindings for psycopg2.",
     long_description=long_description,
@@ -31,12 +31,14 @@ setup(
     author_email='fog@initd.org',
     url='http://initd.org/psycopg/',
     license='GPL with exceptions or ZPL',
-    packages=['Products'],
-    package_dir={'': '.'},
-    include_package_data = True,
-    #package_data={'ZPsycopgDA': ['dtml/*', 'icons/*']},
-    zip_safe=False,
+    packages=['Products.ZPsycopgDA'],
     namespace_packages=['Products'],
+    package_dir={'': '.'},
+    package_data={
+        'Products.ZPsycopgDA': ['dtml/*', 'icons/*']
+    },
+    include_package_data = True,
+    zip_safe=False,
     install_requires=[
         'setuptools',
         # -*- Extra requirements: -*-

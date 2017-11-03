@@ -18,8 +18,11 @@
 __doc__ = "ZPsycopg Database Adapter Registration."
 __version__ = '2.4.7.dev1'
 
-import DA
-
+# Python2 backward compatibility
+try:
+    from . import DA
+except SyntaxError:
+    import DA
 
 def initialize(context):
     context.registerClass(

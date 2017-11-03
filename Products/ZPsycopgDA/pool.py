@@ -199,8 +199,12 @@ class PersistentConnectionPool(AbstractConnectionPool):
 
         # we we'll need the thread module, to determine thread ids, so we
         # import it here and copy it in an instance variable
-        import thread
-        self.__thread = thread
+        try:
+            # Python2 backward compatibility
+            import thread
+            self.__thread = thread
+        except ModuleNotFoundError:
+            self.__thread = threading
 
     def getconn(self, key=None):
         """Generate thread id and return a connection."""
@@ -245,7 +249,7 @@ def getpool(dsn, create=True,
     key = key or dsn
     _connections_lock.acquire()
     try:
-        if not _connections_pool.has_key(key) and create:
+        if key not in _connections_pool and create:
             _connections_pool[key] = \
                 PersistentConnectionPool(4, 200, dsn,
                                          # Patch JJ 2016-05-05: Additional args.

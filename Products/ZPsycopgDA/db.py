@@ -20,7 +20,11 @@ from Shared.DC.ZRDB import dbi_db
 
 from ZODB.POSException import ConflictError
 
-import pool
+# Python2 backward compatibility
+try:
+    from . import pool
+except SyntaxError:
+    import pool
 
 import psycopg2
 from psycopg2.extensions import INTEGER, LONGINTEGER, FLOAT, BOOLEAN, DATE, TIME
@@ -163,7 +167,7 @@ class DB(TM, dbi_db.DB):
                 self.putconn()
 
             if tainted:
-                raise StandardError, "Tainted connection needs to be rolled back."
+                raise ValueError("Tainted connection needs to be rolled back.")
 
         except AttributeError:
             pass
@@ -299,7 +303,7 @@ class DB(TM, dbi_db.DB):
                         if self.autocommit:
                             # LOG.info('Autocommitting %s' % qs)
                             self._commit()
-                    except TransactionRollbackError, err:
+                    except TransactionRollbackError as err:
                         LOG.warning('Transaction Rollback!')
                         # Patch JJ 2016-05-03: Transaction Rollbacks
                         # should not be raised as ConflictErrors, because
@@ -311,7 +315,7 @@ class DB(TM, dbi_db.DB):
                         #logging.debug("Serialization Error, retrying transaction", exc_info=True)
                         #raise ConflictError("TransactionRollbackError from psycopg2")
 
-                    except psycopg2.OperationalError, err:
+                    except psycopg2.OperationalError as err:
                         LOG.error("Operational error on connection, closing it.")
                         try:
                             # Only close our connection
@@ -370,7 +374,7 @@ class DB(TM, dbi_db.DB):
                     break
             self.failures = 0
 
-        except StandardError, err:
+        except Exception as err:
             self._abort()
             raise err
 

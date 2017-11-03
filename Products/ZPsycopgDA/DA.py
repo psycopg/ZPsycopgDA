@@ -22,7 +22,12 @@ import re
 import Acquisition
 import Shared.DC.ZRDB.Connection
 
-from db import DB
+# Python2 backward compatibility
+try:
+    from .db import DB
+except SyntaxError:
+    from db import DB
+
 from App.special_dtml import HTMLFile
 from ExtensionClass import Base
 from DateTime import DateTime
@@ -394,7 +399,7 @@ class TableBrowser(Browser, Acquisition.Implicit):
                 values.append("<dtml-sqlvar %s type=%s>'" %
                               (n, self.vartype(t)))
             else:
-                if isinstance(t, basestring):
+                if isinstance(t, (type(''), type(u''))):
                     if d.find("\'") >= 0:
                         d = "''".join(d.split("\'"))
                     values.append("'%s'" % d)

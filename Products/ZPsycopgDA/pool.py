@@ -62,7 +62,7 @@ class AbstractConnectionPool(object):
         self.readonlymode = readonlymode
         self.encoding = encoding
         self.typecasts = typecasts
-        
+
         self._args = args
         self._kwargs = kwargs
 
@@ -82,15 +82,20 @@ class AbstractConnectionPool(object):
             try:
                 conn = psycopg2.connect(*self._args, **self._kwargs)
                 break
-            except psycopg2.OperationalError:
+            except psycopg2.OperationalError as err:
+                if str(err).startswith('FATAL'):
+                    retries = 1
+                if str(err).startswith('could not connect to server'):
+                    # DANGER: time.sleep() does not play well in multithreading.
+                    import time
+                    time.sleep(0.5) # Magic number
+
+                LOG.warning('Connect failed. %s' % err)
                 LOG.warning('Connect failed. Retries: %d' % retries)
                 retries -= 1
-                if retries == 0:
+                if retries <= 0:
                     raise
-                # DANGER: time.sleep() does not play well in multithreading.
-                #import time
-                #time.sleep(0.5) # Magic number
-                
+
         # Patch JJ 2016-05-05: This is the moment to set the correct
         # transaction isolation level, encoding, and types.
         if self.tilevel:  conn.set_session(isolation_level=int(self.tilevel),
@@ -99,7 +104,7 @@ class AbstractConnectionPool(object):
         if self.typecasts:
             for tc in self.typecasts:
                 register_type(tc, conn)
-        
+
         if key is not None:
             self._used[key] = conn
             self._rused[id(conn)] = key
@@ -148,7 +153,7 @@ class AbstractConnectionPool(object):
             #if conn in self._pool:
             #    LOG.info('Removing connection from _pool')
             #    self._pool.remove(conn)
-                
+
         else:
             conn.close()
 

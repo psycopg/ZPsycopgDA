@@ -29,6 +29,15 @@ LOG = getLogger('ZPsycopgDA.db')
 
 # the DB object, managing all the real query work
 
+def get_thread_id():
+    '''Global function to retrieve the current thread id.'''
+    try:
+        import thread
+        threading = thread
+    except ImportError:
+        import threading
+    return threading.get_ident()
+
 
 class CustomConnectionPool(ThreadedConnectionPool):
 
@@ -62,13 +71,7 @@ class CustomConnectionPool(ThreadedConnectionPool):
 
     def _getkey(self):
         """Return the thread identifier as a key."""
-        try:
-            import thread
-            threading = thread
-        except ImportError:
-            import threading
-        key = threading.get_ident()
-        return key
+        return get_thread_id()
 
     def _putconn(self, conn, key=None, close=False):
         """Patched version of AbstractConnectionPool._putconn(), which closes
@@ -98,6 +101,8 @@ class DB(TM, dbi_db.DB):
             self.encoding = enc
         self.failures = 0
         self.calls = 0
+
+        self.physical_path = physical_path
 
         # Patch JJ 2017-01-27: Add an autocommit feature which commits
         # every query in this instance
@@ -131,7 +136,8 @@ class DB(TM, dbi_db.DB):
             cursor = conn.cursor()
         except psycopg2.InterfaceError:
             # Connection is broken. Put away, then raise.
-            self.pool.putconn(close=True)
+            conn = self.pool.getconn()
+            self.pool.putconn(conn, close=True)
             raise
         return cursor
 
@@ -170,11 +176,17 @@ class DB(TM, dbi_db.DB):
     # - When calling _register(), also do a dbconn2.Connection.tpc_begin().
     # - implement commit() to perform the first phase (tpc_prepare())
     # - implement _finish() to perform the second phase (tpc_commit())
+    def xid(self):
+        '''generate a valid transaction ID for two-phase commit.'''
+        conn = self.getconn(False)
+        xid = conn.xid(1, str(get_thread_id()), self.physical_path)
+        return xid
 
     def _begin(self):
         if self.use_tpc:
             conn = self.getconn(False)
-            conn.tpc_begin(conn.get_backend_pid())
+            xid = self.xid()
+            conn.tpc_begin(xid)
 
     def commit(self, *ignored):
         if self.use_tpc:
@@ -186,6 +198,7 @@ class DB(TM, dbi_db.DB):
             conn = self.getconn(False)
             conn.tpc_commit()
         else:
+            conn = self.getconn(False)
             self._commit(put_connection=True)
 
     def _abort(self, *ignored):
@@ -204,11 +217,23 @@ class DB(TM, dbi_db.DB):
         try:
             conn = self.getconn(False)
             if rollback:
-                conn.rollback()
+                if self.use_tpc:
+                    try:
+                        conn.tpc_rollback()
+                    except psycopg2.ProgrammingError:
+                        pass
+                else:
+                    conn.rollback()
             else:
                 # New method: only taint the connection
                 try:
-                    conn.rollback()
+                    if self.use_tpc:
+                        try:
+                            conn.tpc_rollback()
+                        except psycopg2.ProgrammingError:
+                            pass
+                    else:
+                        conn.rollback()
                 except psycopg2.InterfaceError:
                     LOG.error('Rollback failed, just closing connection.')
                 conn.rollback_tainted = True

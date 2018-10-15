@@ -87,7 +87,8 @@ class DB(TM, dbi_db.DB):
     _p_oid = _p_changed = _registered = None
 
     def __init__(self, dsn, tilevel, typecasts, enc='utf-8',
-                 autocommit=False, readonlymode=False, physical_path=''):
+                 autocommit=False, readonlymode=False, physical_path='',
+                 use_tpc=False):
         self.dsn = dsn
         self.tilevel = tilevel
         self.typecasts = typecasts
@@ -104,6 +105,9 @@ class DB(TM, dbi_db.DB):
 
         # Patch JJ 2017-09-26: Add read-only mode
         self.readonlymode = readonlymode
+
+        # Patch JJ 2018-10-15: Use Two-Phase Commit
+        self.use_tpc = use_tpc
 
         self.make_mappings()
 
@@ -159,8 +163,30 @@ class DB(TM, dbi_db.DB):
         except AttributeError:
             pass
 
+    # TODO Two-Phase Commit (TPC) is needed in order to be able to cope with
+    # errors during "COMMIT".
+    # dbapi and psycopg2 have TPC support.
+    # The method should be included into the Zope Transaction Manager so:
+    # - When calling _register(), also do a dbconn2.Connection.tpc_begin().
+    # - implement commit() to perform the first phase (tpc_prepare())
+    # - implement _finish() to perform the second phase (tpc_commit())
+
+    def _begin(self):
+        if self.use_tpc:
+            conn = self.getconn(False)
+            conn.tpc_begin(conn.get_backend_pid())
+
+    def commit(self, *ignored):
+        if self.use_tpc:
+            conn = self.getconn(False)
+            conn.tpc_prepare()
+
     def _finish(self, *ignored):
-        self._commit(put_connection=True)
+        if self.use_tpc:
+            conn = self.getconn(False)
+            conn.tpc_commit()
+        else:
+            self._commit(put_connection=True)
 
     def _abort(self, *ignored):
         # Patch JJ 2014-05-23: Rollbacks early in the transaction

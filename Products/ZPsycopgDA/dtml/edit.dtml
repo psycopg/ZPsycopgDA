@@ -84,6 +84,17 @@
   <tr>
     <td align="left" valign="top">
     <div class="form-label">
+    Use Two-Phase Commit
+    </div>
+    </td>
+    <td align="left" valign="top">
+    <input type="checkbox" name="use_tpc" value="YES"
+      <dtml-if use_tpc>checked="YES"</dtml-if> />
+    </td>
+  </tr>
+  <tr>
+    <td align="left" valign="top">
+    <div class="form-label">
     Encoding
     </div>
     </td>

@@ -44,9 +44,9 @@ except ImportError:
 
 import psycopg2
 from psycopg2 import NUMBER, STRING, ROWID, DATETIME
-from psycopg2.extensions import INTEGER, LONGINTEGER, FLOAT, BOOLEAN, DATE
-from psycopg2.extensions import TIME, INTERVAL
-from psycopg2.extensions import new_type, register_type
+from psycopg2.extensions import INTEGER, FLOAT, BOOLEAN, DATE
+from psycopg2.extensions import TIME
+from psycopg2.extensions import new_type
 
 import psycopg2.extensions
 DEFAULT_TILEVEL = psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ
@@ -61,11 +61,12 @@ def manage_addZPsycopgConnection(self, id, title, connection_string,
                                  encoding='', check=None,
                                  autocommit=None,
                                  readonlymode=None,
+                                 use_tpc=False,
                                  REQUEST=None):
     """Add a DB connection to a folder."""
     self._setObject(id, Connection(id, title, connection_string,
                                    zdatetime, check, tilevel, encoding,
-                                   autocommit, readonlymode))
+                                   autocommit, readonlymode, use_tpc))
     if REQUEST is not None:
         return self.manage_main(self, REQUEST)
 
@@ -84,21 +85,23 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
     def __init__(self, id, title, connection_string,
                  zdatetime, check=None, tilevel=DEFAULT_TILEVEL,
                  encoding='UTF-8',
-                 autocommit=False, readonlymode=False):
+                 autocommit=False, readonlymode=False,
+                 use_tpc=False):
         self.zdatetime = zdatetime
         self.id = str(id)
         self.edit(title, connection_string, zdatetime,
                   check=check, tilevel=tilevel, encoding=encoding,
-                  autocommit=autocommit, readonlymode=readonlymode)
+                  autocommit=autocommit, readonlymode=readonlymode,
+                  use_tpc=use_tpc)
 
     def factory(self):
         return DB
 
-    ## connection parameters editing ##
+    # connection parameters editing
 
     def edit(self, title, connection_string,
              zdatetime, check=None, tilevel=DEFAULT_TILEVEL, encoding='UTF-8',
-             autocommit=False, readonlymode=False):
+             autocommit=False, readonlymode=False, use_tpc=False):
         self.title = title
         self.connection_string = connection_string
         self.zdatetime = zdatetime
@@ -106,6 +109,7 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
         self.encoding = encoding
         self.autocommit = autocommit
         self.readonlymode = readonlymode
+        self.use_tpc = use_tpc
 
         if check:
             self.connect(self.connection_string)
@@ -117,11 +121,13 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
                     encoding='UTF-8',
                     autocommit=False,
                     readonlymode=False,
+                    use_tpc=False,
                     REQUEST=None):
         """Edit the DB connection."""
         self.edit(title, connection_string, zdatetime,
                   check=check, tilevel=tilevel, encoding=encoding,
-                  autocommit=autocommit, readonlymode=readonlymode)
+                  autocommit=autocommit, readonlymode=readonlymode,
+                  use_tpc=use_tpc)
         if REQUEST is not None:
             msg = "Connection edited."
             return self.manage_main(self, REQUEST, manage_tabs_message=msg)
@@ -149,6 +155,11 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
         except AttributeError:
             self.readonlymode = False
 
+        try:
+            self.use_tpc
+        except AttributeError:
+            self.use_tpc = False
+
         if len(self.getPhysicalPath()) == 1:
             # We do not have our physical path (yet)
             # But we need the path to uniquely identify the connection!
@@ -159,7 +170,8 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
         # TODO: let the psycopg exception propagate, or not?
         self._v_database_connection = dbf(
             self.connection_string, self.tilevel, self.get_type_casts(),
-            self.encoding, self.autocommit, self.readonlymode, physical_path)
+            self.encoding, self.autocommit, self.readonlymode, physical_path,
+            self.use_tpc)
         self._v_database_connection.open()
         self._v_connected = DateTime()
 
@@ -172,14 +184,14 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
         else:
             return DATETIME, DATE, TIME
 
-    ## browsing and table/column management ##
+    # browsing and table/column management
 
     manage_options = Shared.DC.ZRDB.Connection.Connection.manage_options
     # + (
     #    {'label': 'Browse', 'action':'manage_browse'},)
 
-    #manage_tables = HTMLFile('dtml/tables', globals())
-    #manage_browse = HTMLFile('dtml/browse', globals())
+    # manage_tables = HTMLFile('dtml/tables', globals())
+    # manage_browse = HTMLFile('dtml/browse', globals())
 
     info = None
 
@@ -230,7 +242,7 @@ def check_psycopg_version(version):
         raise ImportError("psycopg version %s is known to be buggy" % version)
 
 
-## database connection registration data ##
+# database connection registration data
 
 classes = (Connection,)
 
@@ -254,7 +266,7 @@ for icon in ('table', 'view', 'stable', 'what', 'field', 'text', 'bin',
     misc_[icon] = ImageFile('icons/%s.gif' % icon, globals())
 
 
-## zope-specific psycopg typecasters ##
+# zope-specific psycopg typecasters
 
 # convert an ISO timestamp string from postgres to a Zope DateTime object
 def _cast_DateTime(iso, curs):
@@ -293,13 +305,14 @@ def _cast_Time(iso, curs):
 def _cast_Interval(iso, curs):
     return iso
 
+
 ZDATETIME = new_type((1184, 1114), "ZDATETIME", _cast_DateTime)
 ZINTERVAL = new_type((1186,), "ZINTERVAL", _cast_Interval)
 ZDATE = new_type((1082,), "ZDATE", _cast_Date)
 ZTIME = new_type((1083,), "ZTIME", _cast_Time)
 
 
-## table browsing helpers ##
+# table browsing helpers
 
 class TableBrowserCollection(Acquisition.Implicit):
     pass
@@ -345,7 +358,7 @@ class TableBrowser(Browser, Acquisition.Implicit):
             b._d = d
             try:
                 b.icon = field_icons[d['Type']]
-            except:
+            except AttributeError:
                 pass
             b.TABLE_NAME = tname
             r.append(b)
@@ -429,6 +442,7 @@ class ColumnBrowser(Browser):
             return " %(Type)s(%(Precision)s,%(Scale)s) %(Nullable)s" % d
         else:
             return " %(Type)s(%(Precision)s) %(Nullable)s" % d
+
 
 table_icons = {
     'TABLE': 'table',

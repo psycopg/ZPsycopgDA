@@ -24,10 +24,18 @@ from psycopg2.extensions import register_type
 from psycopg2 import NUMBER, STRING, ROWID, DATETIME
 from psycopg2.pool import AbstractConnectionPool, ThreadedConnectionPool
 
+try:
+    from Zope2.App.startup import RetryError, RetryDelayError
+except ImportError:
+    # Fallback declarations for graceful degradation,
+    # Zope will not retry as intended!
+    from Zope2.App.startup import ConflictError
+    RetryError = ConflictError
+    RetryDelayError = ConflictError
+
 from logging import getLogger
 LOG = getLogger('ZPsycopgDA.db')
 
-# the DB object, managing all the real query work
 
 def get_thread_id():
     '''Global function to retrieve the current thread id.'''
@@ -85,6 +93,9 @@ class CustomConnectionPool(ThreadedConnectionPool):
         return retval
 
 
+# the DB object, managing all the real query work
+
+
 class DB(TM, dbi_db.DB):
 
     _p_oid = _p_changed = _registered = None
@@ -114,6 +125,9 @@ class DB(TM, dbi_db.DB):
         # Patch JJ 2018-10-15: Use Two-Phase Commit
         self.use_tpc = use_tpc
 
+        # Connectors with tainted transactions
+        self.tainted = []
+
         self.make_mappings()
 
         self.pool = CustomConnectionPool(
@@ -142,32 +156,10 @@ class DB(TM, dbi_db.DB):
         return cursor
 
     def _commit(self, put_connection=False):
-        try:
-            conn = self.getconn(False)
-
-            # Patch JJ 2014-05-23: Check if the connection has beed
-            # tainted by one of the statements executed. If that is
-            # the case, we must roll back and raise an error.
-
-            try:
-                tainted = conn.rollback_tainted
-            except AttributeError:
-                tainted = False
-
-            if tainted:
-                conn.rollback()
-            else:
-                conn.commit()
-
-            self.rollback_tainted = False
-            if put_connection:
-                self.putconn()
-
-            if tainted:
-                raise ValueError("Tainted connection needs to be rolled back.")
-
-        except AttributeError:
-            pass
+        conn = self.getconn(False)
+        conn.commit()
+        if put_connection:
+            self.putconn()
 
     # Two-Phase Commit (TPC) is needed in order to be able to cope with
     # errors during "COMMIT".
@@ -189,57 +181,46 @@ class DB(TM, dbi_db.DB):
             conn.tpc_begin(xid)
 
     def commit(self, *ignored):
+        conn = self.getconn()
+        if conn in self.tainted:
+            return
         if self.use_tpc:
-            conn = self.getconn(False)
-            conn.tpc_prepare()
+            try:
+                conn = self.getconn(False)
+                conn.tpc_prepare()
+            except psycopg2.Error as error:
+                self.handle_retry(error)
+                raise error
 
     def _finish(self, *ignored):
+        conn = self.getconn(False)
+        if conn in self.tainted:
+            self._abort()
+            return
         if self.use_tpc:
-            conn = self.getconn(False)
             conn.tpc_commit()
         else:
-            conn = self.getconn(False)
             self._commit(put_connection=True)
 
     def _abort(self, *ignored):
-        # Patch JJ 2014-05-23: Rollbacks early in the transaction
-        # result in all other queries processing without error, even
-        # though the transaction will be rolled back. This is a
-        # general problem with Zope transactions and database
-        # transactions. They do not interact correctly if SQL queries
-        # are masked in try blocks.
-
-        # There's a problem with removing the rollback completely,
-        # though. Some components of Zope, specifically the "test"
-        # form of ZSQLMethods, rely on bad queries being trapped in
-        # "try".
-        rollback = False
+        conn = self.getconn(False)
         try:
-            conn = self.getconn(False)
-            if rollback:
-                if self.use_tpc:
-                    try:
-                        conn.tpc_rollback()
-                    except psycopg2.ProgrammingError:
-                        pass
-                else:
-                    conn.rollback()
-            else:
-                # New method: only taint the connection
+            if self.use_tpc:
+                # TODO An error can occur if this connector
+                # has not yet started a transaction. Maybe
+                # possible to fix using tpc_abort() rather than
+                # abort().
                 try:
-                    if self.use_tpc:
-                        try:
-                            conn.tpc_rollback()
-                        except psycopg2.ProgrammingError:
-                            pass
-                    else:
-                        conn.rollback()
-                except psycopg2.InterfaceError:
-                    LOG.error('Rollback failed, just closing connection.')
-                conn.rollback_tainted = True
-            self.putconn()
-        except AttributeError:
-            pass
+                    conn.tpc_rollback()
+                except psycopg2.ProgrammingError:
+                    pass
+            else:
+                conn.rollback()
+        except psycopg2.InterfaceError:
+            LOG.error('Rollback failed, just closing connection.')
+        if conn in self.tainted:
+            self.tainted.remove(conn)
+        self.putconn()
 
     def open(self):
         pass
@@ -305,50 +286,65 @@ class DB(TM, dbi_db.DB):
         self.putconn()
         return self.convert_description(c.description, True)
 
+    def handle_retry(self, error):
+        '''Find out if an error deserves a retry.'''
+        name = error.__class__.__name__
+        value = repr(error)
+        serialization_error = (
+            name == 'TransactionRollbackError' and
+            'could not serialize' in value
+        )
+        if serialization_error:
+            raise RetryError
+
+        connection_closed_error = (
+            name == 'OperationalError' and (
+                'server closed the connection' in value or
+                'could not connect to server' in value or
+                'the database system is shutting down' in value or
+                'the database system is starting up' in value
+            )
+        ) or (
+            name == 'InterfaceError' and (
+                'connection already closed' in value
+            )
+        )
+        if connection_closed_error:
+            # Close all connections in the pool if there
+            # was a connection problem.
+            LOG.error("Operational error on connection, "
+                      "closing all in this pool: %s." %
+                      repr(self.pool))
+            for key, conn in self.pool._used.items():
+                self.pool.putconn(conn=conn, key=key, close=True)
+            raise RetryDelayError
+
     # query execution
 
     def query(self, query_string, max_rows=None, query_data=None):
-        self._register()
-        self.calls = self.calls+1
-
-        desc = ()
-        res = []
-        nselects = 0
-
-        c = self.getcursor()
-
         try:
+            self._register()
+            self.calls = self.calls+1
+
+            conn = self.getconn()
+            if conn in self.tainted:
+                raise ValueError("Query attempted on tainted transaction.")
+
+            desc = ()
+            res = []
+            nselects = 0
+
+            c = self.getcursor()
+
             for qs in [x for x in query_string.split('\0') if x]:
-                try:
-                    # LOG.info("Trying to execute statement %s" % qs)
-                    if query_data:
-                        c.execute(qs, query_data)
-                    else:
-                        c.execute(qs)
-                    if self.autocommit:
-                        # LOG.info('Autocommitting.')
-                        self._commit()
-
-                except psycopg2.OperationalError as err:
-                    connection_closed_error = (
-                        'server closed the connection' in repr(err) or
-                        'could not connect to server' in repr(err) or
-                        'the database system is shutting down' in repr(err) or
-                        'the database system is starting up' in repr(err))
-                    if connection_closed_error:
-                        # Close all connections in the pool if there
-                        # was a connection problem.
-                        LOG.error("Operational error on connection, "
-                                  "closing all in this pool: %s." %
-                                  repr(self.pool))
-                        for key, conn in self.pool._used.items():
-                            self.pool.putconn(conn=conn, key=key, close=True)
-
-                    # Patch JJ 2014-05-23: Operational errors should
-                    # not be muted! This masks transaction rollbacks
-                    # in a very ugly way. Instead, raise the error.
-                    LOG.info('Passing through operational error')
-                    raise err
+                # LOG.info("Trying to execute statement %s" % qs)
+                if query_data:
+                    c.execute(qs, query_data)
+                else:
+                    c.execute(qs)
+                if self.autocommit:
+                    # LOG.info('Autocommitting.')
+                    self._commit()
 
                 if c.description is not None:
                     nselects += 1
@@ -380,7 +376,15 @@ class DB(TM, dbi_db.DB):
             self.failures = 0
 
         except Exception as err:
+            self.handle_retry(err)
             self._abort()
+
+            # Taint this transaction
+            conn = self.getconn()
+            LOG.warning('query() tainting: {} in {}'.format(
+                conn, self.tainted))
+            if conn not in self.tainted:
+                self.tainted.append(conn)
             raise err
 
         return self.convert_description(desc), res

@@ -45,8 +45,8 @@ class CustomConnectionPool(ThreadedConnectionPool):
         """Patched version of AbstractConnectionPool._connect(), which adds
         isolation levels, read-only mode, and encoding settings."""
         # Only use the 'dsn' keyword argument
-        LOG.warning("Making a new connection to PostgreSQL "
-                    "for pool %s, key %s" % (repr(self), repr(key)))
+        LOG.debug("Making a new connection to PostgreSQL "
+                  "for pool %s, key %s" % (repr(self), repr(key)))
         args = self._kwargs
         conn = psycopg2.connect(dsn=args['dsn'])
 
@@ -169,7 +169,7 @@ class DB(TM, dbi_db.DB):
         except AttributeError:
             pass
 
-    # TODO Two-Phase Commit (TPC) is needed in order to be able to cope with
+    # Two-Phase Commit (TPC) is needed in order to be able to cope with
     # errors during "COMMIT".
     # dbapi and psycopg2 have TPC support.
     # The method should be included into the Zope Transaction Manager so:

@@ -240,7 +240,7 @@ class DB(TM, dbi_db.DB):
         pass
 
     def sortKey(self):
-        return 1
+        return '1'
 
     def make_mappings(self):
         """Generate the mappings used later by self.convert_description()."""

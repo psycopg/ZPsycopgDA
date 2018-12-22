@@ -29,7 +29,11 @@ try:
 except ImportError:
     # Fallback declarations for graceful degradation,
     # Zope will not retry as intended!
-    from Zope2.App.startup import ConflictError
+    try:
+        from Zope2.App.startup import ConflictError
+    except ImportError:
+        # With Zope4, this changed
+        from ZODB.POSException import ConflictError
     RetryError = ConflictError
     RetryDelayError = ConflictError
 

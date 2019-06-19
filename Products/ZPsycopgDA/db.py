@@ -302,7 +302,8 @@ class DB(TM, dbi_db.DB):
                 'server closed the connection' in value or
                 'could not connect to server' in value or
                 'the database system is shutting down' in value or
-                'the database system is starting up' in value
+                'the database system is starting up' in value or
+                'terminating connection due to administrator command' in value
             )
         ) or (
             name == 'InterfaceError' and (

@@ -203,7 +203,14 @@ class DB(TM, dbi_db.DB):
             self._commit(put_connection=True)
 
     def _abort(self, *ignored):
-        conn = self.getconn(False)
+        # In cases where the _abort() occurs because the connection to the
+        # database failed, getconn() will fail also.
+        try:
+            conn = self.getconn(False)
+        except psycopg2.Error:
+            LOG.error('getconn() failed during abort.')
+            return
+
         try:
             if self.use_tpc:
                 # TODO An error can occur if this connector
@@ -308,6 +315,10 @@ class DB(TM, dbi_db.DB):
         ) or (
             name == 'InterfaceError' and (
                 'connection already closed' in value
+            )
+        ) or (
+            name == 'NotSupportedError' and (
+                'cannot set transaction read-write mode' in value
             )
         )
         if connection_closed_error:

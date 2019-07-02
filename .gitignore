@@ -2,3 +2,10 @@ build/
 dist/
 ZPsycopgDA.egg-info/
 .DS_Store
+
+# virtualenv:
+bin/
+include/
+lib/
+lib64
+pip-selfcheck.json

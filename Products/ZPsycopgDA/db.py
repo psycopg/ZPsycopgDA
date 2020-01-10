@@ -308,13 +308,22 @@ class DB(TM, dbi_db.DB):
         if serialization_error:
             raise RetryError
 
-        connection_closed_error = (
+        # Errors that only affect our connection and where an immediate retry
+        # should work.
+        connection_error = (
             name == 'OperationalError' and (
                 'server closed the connection' in value or
+                'terminating connection due to administrator command' in value
+            )
+        )
+
+        # Errors that indicate that the database encounters problems. Retry
+        # only after a few seconds.
+        server_error = (
+            name == 'OperationalError' and (
                 'could not connect to server' in value or
                 'the database system is shutting down' in value or
                 'the database system is starting up' in value or
-                'terminating connection due to administrator command' in value or
                 'SSL connection has been closed unexpectedly' in value
             )
         ) or (
@@ -326,14 +335,16 @@ class DB(TM, dbi_db.DB):
                 'cannot set transaction read-write mode' in value
             )
         )
-        if connection_closed_error:
-            # Close all connections in the pool if there
-            # was a connection problem.
-            LOG.error("Operational error on connection, "
-                      "closing all in this pool: %s." %
-                      repr(self.pool))
-            for key, conn in self.pool._used.items():
-                self.pool.putconn(conn=conn, key=key, close=True)
+
+        if connection_error or server_error:
+            LOG.error(
+                "Error on connection. Closing. ({}, {})".format(name, value)
+            )
+            self.getconn().close()
+
+        if connection_error:
+            raise RetryError
+        if server_error:
             raise RetryDelayError
 
     # query execution

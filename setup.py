@@ -1,5 +1,17 @@
 from setuptools import setup
 
+# Get the version number from the package
+f = open('Products/ZPsycopgDA/__init__.py')
+try:
+    for line in f:
+        if line.startswith('__version__'):
+            version = line.split()[-1].replace("'", "")
+            break
+    else:
+        raise ValueError('__version__ not found')
+finally:
+    f.close()
+
 long_description = (
     open('README.rst').read()
     + '\n' +
@@ -14,7 +26,7 @@ long_description = (
 
 setup(
     name='Products.ZPsycopgDA',
-    version='3.0',
+    version=version,
     description="Zope bindings for psycopg2.",
     long_description=long_description,
     # Get more strings from

@@ -1,6 +1,12 @@
 Changelog
 =========
 
+2.4.7.dev1+perfact.1
+-------------------
+Collection of PerFact patches to the Product, including reorganization of how
+pooling works.
+
+
 2.4.7
 -------------------
 

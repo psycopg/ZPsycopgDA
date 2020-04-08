@@ -201,7 +201,7 @@ class DB(TM, dbi_db.DB):
                     desc = c.description
             self.failures = 0
 
-        except StandardError, err:
+        except StandardError as err:
             self._abort()
             raise err
 

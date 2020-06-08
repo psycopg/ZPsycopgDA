@@ -132,6 +132,9 @@ class DB(TM, dbi_db.DB):
         # Connectors with tainted transactions
         self.tainted = []
 
+        # Connectors that have uncommited changes
+        self.in_transaction = set()
+
         self.make_mappings()
 
         self.pool = CustomConnectionPool(
@@ -179,8 +182,8 @@ class DB(TM, dbi_db.DB):
         return xid
 
     def _begin(self):
+        conn = self.getconn(False)
         if self.use_tpc:
-            conn = self.getconn(False)
             xid = self.xid()
             conn.tpc_begin(xid)
 
@@ -205,6 +208,7 @@ class DB(TM, dbi_db.DB):
             conn.tpc_commit()
         else:
             self._commit(put_connection=True)
+        self.in_transaction.discard(conn)
 
     def _abort(self, *ignored):
         # In cases where the _abort() occurs because the connection to the
@@ -297,34 +301,43 @@ class DB(TM, dbi_db.DB):
         self.putconn()
         return self.convert_description(c.description, True)
 
-    def handle_retry(self, error):
-        '''Find out if an error deserves a retry.'''
-        name = error.__class__.__name__
-        value = repr(error)
-        serialization_error = (
-            name == 'TransactionRollbackError' and
-            'could not serialize' in value
-        )
-        if serialization_error:
-            raise RetryError
+    @staticmethod
+    def split_error(error):
+        '''
+        Split error in name and value for inspection
+        '''
+        return (error.__class__.__name__, repr(error))
 
-        # Errors that only affect our connection and where an immediate retry
-        # should work.
-        # AdminShutdown sounds bad, but it might only be our connection that is
-        # affected. When reconnecting after a regular Retry we see if it
-        # acutually something serious, in which case we will get something like
-        # 'the database is shutting down'. If it is only our connection, a
-        # simple reconnect will work.
-        connection_error = (
-            name in ('AdminShutdown', 'OperationalError') and (
-                'server closed the connection' in value or
-                'terminating connection due to administrator command' in value
-            )
+    @staticmethod
+    def is_connection_error(error):
+        '''
+        Errors that only affect our connection and where an immediate retry
+        should work.
+        AdminShutdown sounds bad, but it might only be our connection that is
+        affected. When reconnecting after a regular Retry we see if it
+        acutually something serious, in which case we will get something like
+        'the database is shutting down'. If it is only our connection, a simple
+        reconnect will work.
+        '''
+        (name, value) = DB.split_error(error)
+        return name in (
+            'AdminShutdown',
+            'OperationalError',
+            'InterfaceError'
+        ) and (
+            'server closed the connection' in value or
+            'terminating connection due to administrator command' in value or
+            'connection already closed' in value
         )
 
-        # Errors that indicate that the database encounters problems. Retry
-        # only after a few seconds.
-        server_error = (
+    @staticmethod
+    def is_server_error(error):
+        '''
+        Errors that indicate that the database encounters problems. Retry only
+        after a few seconds.
+        '''
+        (name, value) = DB.split_error(error)
+        return (
             name == 'OperationalError' and (
                 'could not connect to server' in value or
                 'the database system is shutting down' in value or
@@ -332,17 +345,34 @@ class DB(TM, dbi_db.DB):
                 'SSL connection has been closed unexpectedly' in value
             )
         ) or (
-            name == 'InterfaceError' and (
-                'connection already closed' in value
-            )
-        ) or (
             name == 'NotSupportedError' and (
                 'cannot set transaction read-write mode' in value
             )
         )
 
+    @staticmethod
+    def is_serialization_error(error):
+        '''
+        Original retry eror in case of serialization failures.
+        '''
+        (name, value) = DB.split_error(error)
+        return (
+            name == 'TransactionRollbackError' and
+            'could not serialize' in value
+        )
+
+
+    def handle_retry(self, error):
+        '''Find out if an error deserves a retry.'''
+        if self.is_serialization_error(error):
+            raise RetryError
+
+        connection_error = self.is_connection_error(error)
+        server_error = self.is_server_error(error)
+
         if connection_error or server_error:
-            LOG.error(
+            name, value = self.split_error(error)
+            LOG.exception(
                 "Error on connection. Closing. ({}, {})".format(name, value)
             )
             self.getconn().close()
@@ -353,71 +383,87 @@ class DB(TM, dbi_db.DB):
             raise RetryDelayError
 
     # query execution
-
     def query(self, query_string, max_rows=None, query_data=None):
+        self._register()
+        self.calls = self.calls+1
+
         try:
-            self._register()
-            self.calls = self.calls+1
-
-            conn = self.getconn()
-            if conn in self.tainted:
-                raise ValueError("Query attempted on tainted transaction.")
-
-            desc = ()
-            res = []
-            nselects = 0
-
-            c = self.getcursor()
-
-            for qs in [x for x in query_string.split('\0') if x]:
-                # LOG.info("Trying to execute statement %s" % qs)
-                if query_data:
-                    c.execute(qs, query_data)
-                else:
-                    c.execute(qs)
-                if self.autocommit:
-                    # LOG.info('Autocommitting.')
-                    self._commit()
-
-                if c.description is not None:
-                    nselects += 1
-                    if c.description != desc and nselects > 1:
-                        raise psycopg2.ProgrammingError(
-                            'multiple selects in single query not allowed')
-                    if max_rows:
-                        res = c.fetchmany(max_rows)
-                        # JJ 2017-07-20: Danger ahead. We might
-                        # have many more rows in the database,
-                        # which are truncated by max_rows. In that
-                        # case, we should be able to react, by
-                        # raising or logging.
-                        if len(res) == max_rows:
-                            try:
-                                overshoot_result = c.fetchone()
-                            except:
-                                overshoot_result = None
-                            if overshoot_result:
-                                assert False, (
-                                    "This query has returned more than "
-                                    "max_rows results. Please raise "
-                                    "max_rows or limit in SQL.")
-
-                    else:
-                        res = c.fetchall()
-                    desc = c.description
-
-            self.failures = 0
-
+            return self.query_inner(query_string, max_rows, query_data)
         except Exception as err:
+            conn = self.getconn()
+            if ((conn not in self.in_transaction)
+                    and self.is_connection_error(err)):
+                LOG.warning(
+                    "Connection error on first query in transaction, "
+                    "reconnecting."
+                )
+                self.putconn(close=True)
+                return self.query(query_string, max_rows, query_data)
+
             self.handle_retry(err)
             self._abort()
 
             # Taint this transaction
-            conn = self.getconn()
             LOG.warning('query() tainting: {} in {}'.format(
                 conn, self.tainted))
             if conn not in self.tainted:
                 self.tainted.append(conn)
             raise err
 
+
+    def query_inner(self, query_string, max_rows=None, query_data=None):
+        conn = self.getconn()
+        if conn in self.tainted:
+            raise ValueError("Query attempted on tainted transaction.")
+
+        desc = ()
+        res = []
+        nselects = 0
+
+        c = self.getcursor()
+
+        for qs in [x for x in query_string.split('\0') if x]:
+            # LOG.info("Trying to execute statement %s" % qs)
+            if query_data:
+                c.execute(qs, query_data)
+            else:
+                c.execute(qs)
+
+            if self.autocommit:
+                # LOG.info('Autocommitting.')
+                try:
+                    self._commit()
+                except Exception as err:
+                    raise
+
+            if c.description is not None:
+                nselects += 1
+                if c.description != desc and nselects > 1:
+                    raise psycopg2.ProgrammingError(
+                        'multiple selects in single query not allowed')
+                if max_rows:
+                    res = c.fetchmany(max_rows)
+                    # JJ 2017-07-20: Danger ahead. We might
+                    # have many more rows in the database,
+                    # which are truncated by max_rows. In that
+                    # case, we should be able to react, by
+                    # raising or logging.
+                    if len(res) == max_rows:
+                        try:
+                            overshoot_result = c.fetchone()
+                        except:
+                            overshoot_result = None
+                        if overshoot_result:
+                            assert False, (
+                                "This query has returned more than "
+                                "max_rows results. Please raise "
+                                "max_rows or limit in SQL.")
+
+                else:
+                    res = c.fetchall()
+                desc = c.description
+
+        self.failures = 0
+
+        self.in_transaction.add(conn)
         return self.convert_description(desc), res

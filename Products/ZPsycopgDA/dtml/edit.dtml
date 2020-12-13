@@ -1,148 +1,116 @@
 <dtml-var manage_page_header>
 <dtml-var manage_tabs>
 
-<p class="form-help">
-In the form below <em>Connection String</em> (also called the Data Source Name
-or DSN for short) is a string containing the connection parameters, for
-example: “dbname=test user=postgres password=secret”
-</p>
+<main class="container-fluid">
 
-<p class="form-help">
-The basic connection parameters are:
-<ul>
-    <li>dbname: the database name (only in dsn string)</li>
-    <li>database: the database name (only as keyword argument)</li>
-    <li>user: user name used to authenticate</li>
-    <li>password: password used to authenticate</li>
-    <li>host: database host address (defaults to UNIX socket if not provided)</li>
-    <li>port: connection port number (defaults to 5432 if not provided)</li>
-</ul>
-</p>
+  <p class="form-help">
+    A Zope Psycopg 2 Database Connection is used to connect and execute
+    queries on a PostgreSQL database. In the form below <em>Connection String</em> 
+    (also called the Data Source Name or DSN for short) is a string containing 
+    the connection parameters, for example: 
+    <samp>“dbname=test user=postgres password=secret”</samp>
+  </p>
 
-<p class="form-help">
-<b>Note on transaction levels:</b> Unless your server is capable of retries
-(Setting "max-conflict-retries" in zope.conf), you should not use
-"repeatable read" or "serializable", because both can produce random errors
-on contradicting transactions.
-</p>
+  <form action="manage_edit" method="POST">
+    <div class="form-group row">
+      <label for="title" class="form-label col-sm-4 col-md-3">Title</label>
+      <div class="col-sm-8 col-md-9">
+        <input id="title" class="form-control" type="text" name="title" 
+          placeholder="&dtml-title;"
+          value="&dtml-title;" />
+      </div>
+    </div>
 
-<p class="form-help">
-<b>Note on two-phase commit:</b> This feature uses "PREPARE TRANSACTION", which
-has some limitations (no NOTIFY or LISTEN is possible), and needs special
-provisions to clean up orphaned prepared transactions. Use with care.
-</p>
+    <div class="form-group row">
+      <label for="connection_string" class="form-label col-sm-4 col-md-3">Connection string</label>
+      <div class="col-sm-8 col-md-9">
+        <input id="connection_string" class="form-control" type="text" name="connection_string" 
+          placeholder="dbname=test user=postgres password=secret"
+          value="&dtml-connection_string;"/>
+        <small>
+          The basic connection parameters are:
+          <br/>
+          <code>dbname</code>: the database name (only in dsn string)
+          <br />
+          <code>database</code>: the database name (only as keyword argument)
+          <br />
+          <code>user</code>: user name used to authenticate
+          <br />
+          <code>password</code>: password used to authenticate
+          <br />
+          <code>host</code>: database host address (defaults to UNIX socket if not provided)
+          <br />
+          <code>port</code>: connection port number (defaults to 5432 if not provided)
+        </small>
+      </div>
+    </div>
 
-<form action="manage_edit" method="POST">
-<table cellspacing="0" cellpadding="2" border="0">
-  <tr>
-    <td align="left" valign="top">
-    <div class="form-optional">
-    Title
+    <div class="form-group row">
+      <label for="zdatetime" class="form-label col-sm-4 col-md-3">Use Zope's internal DateTime</label>
+      <div class="col-sm-5 col-md-1">
+        <input class="btn btn-primary" type="checkbox" id="zdatetime" name="zdatetime" value="YES" checked="YES" class="form-control" <dtml-if expr="zdatetime">checked="YES"</dtml-if>/>
+      </div>
     </div>
-    </td>
-    <td align="left" valign="top">
-    <input type="text" name="title" size="40"
-        value="&dtml-title;"/>
-    </td>
-  </tr>
-  <tr>
-    <td align="left" valign="top">
-    <div class="form-label">
-    Connection string
+
+    <div class="form-group row">
+      <label for="tilevel" class="form-label col-sm-4 col-md-3">Transaction isolation level</label>
+      <div class="col-sm-8 col-md-9">
+        <select id="tilevel" class="form-control" name="tilevel:int">
+          <option value="4" <dtml-if expr="tilevel==4">selected="YES"</dtml-if>>Read uncommitted</option>
+          <option value="1" <dtml-if expr="tilevel==1">selected="YES"</dtml-if>>Read committed</option>
+          <option value="2" <dtml-if expr="tilevel==2">selected="YES"</dtml-if>>Repeatable read</option>
+          <option value="3" <dtml-if expr="tilevel==3">selected="YES"</dtml-if>>Serializable</option>
+        </select>
+        <small>
+          Note: Unless your server is capable of retries (Setting <samp>max-conflict-retries</samp> 
+          in zope.conf), you should not use <samp>repeatable read</samp> or <samp>serializable</samp>, 
+          because both can produce random errors on contradicting transactions.
+        </small>
+      </div>
     </div>
-    </td>
-    <td align="left" valign="top">
-    <input type="text" name="connection_string" size="40"
-           value="&dtml-connection_string;" />
-    </td>
-  </tr>
-  <tr>
-    <td align="left" valign="top">
-    <div class="form-label">
-    Use Zope's internal DateTime
+
+
+    <div class="form-group row">
+      <label for="autocommit" class="form-label col-sm-4 col-md-3">Auto-commit each query</label>
+      <div class="col-sm-5 col-md-1">
+        <input class="btn btn-primary" type="checkbox" id="autocommit" name="autocommit" value="YES" checked="YES" class="form-control"/>
+      </div>
     </div>
-    </td>
-    <td align="left" valign="top">
-    <input type="checkbox" name="zdatetime" value="YES"
-      <dtml-if expr="zdatetime">checked="YES"</dtml-if> />
-    </td>
-  </tr>
-  <tr>
-    <td align="left" valign="top">
-    <div class="form-label">
-    Transaction isolation level
+
+    <div class="form-group row">
+      <label for="readonlymode" class="form-label col-sm-4 col-md-3">Read-only mode</label>
+      <div class="col-sm-5 col-md-1">
+        <input class="btn btn-primary" type="checkbox" id="readonlymode" name="readonlymode" value="YES" checked="YES" class="form-control"/>
+      </div>
     </div>
-    </td>
-    <td align="left" valign="top">
-      <select name="tilevel:int">
-        <option value="4"
-                <dtml-if expr="tilevel==4">selected="YES"</dtml-if>>
-        Read uncommitted</option>
-        <option value="1"
-                <dtml-if expr="tilevel==1">selected="YES"</dtml-if>>
-        Read committed</option>
-        <option value="2"
-                <dtml-if expr="tilevel==2">selected="YES"</dtml-if>>
-        Repeatable read</option>
-        <option value="3"
-                <dtml-if expr="tilevel==3">selected="YES"</dtml-if>>
-        Serializable</option>
-      </select>
-    </td>
-  </tr>
-  <tr>
-    <td align="left" valign="top">
-    <div class="form-label">
-    Auto-commit each query
+
+    <div class="form-group row">
+      <label for="use_tpc" class="form-label col-sm-4 col-md-3">Use Two-Phase Commit</label>
+      <div class="col-sm-8 col-md-9">
+        <input class="btn btn-primary" type="checkbox" id="use_tpc" name="use_tpc" value="YES" checked="YES" class="form-control"/>
+        <small class="d-block">
+          Note: "Two-Phase Commit" uses <samp>PREPARE TRANSACTION</samp>, which 
+          has some limitations (no <samp>NOTIFY</samp> or <samp>LISTEN</samp> is possible), 
+          and needs special provisions to clean up orphaned prepared transactions. 
+          Use with care.
+        </small>
+      </div>
     </div>
-    </td>
-    <td align="left" valign="top">
-    <input type="checkbox" name="autocommit" value="YES"
-      <dtml-if autocommit>checked="YES"</dtml-if> />
-    </td>
-  </tr>
-  <tr>
-    <td align="left" valign="top">
-    <div class="form-label">
-    Read-only mode
+
+    <div class="form-group row">
+      <label for="encoding" class="form-label col-sm-4 col-md-3">Encoding</label>
+      <div class="col-sm-8 col-md-9">
+        <input id="encoding" class="form-control" type="text" name="encoding" 
+          placeholder="UTF-8"
+          value="&dtml-encoding;" />
+      </div>
     </div>
-    </td>
-    <td align="left" valign="top">
-    <input type="checkbox" name="readonlymode" value="YES"
-      <dtml-if readonlymode>checked="YES"</dtml-if> />
-    </td>
-  </tr>
-  <tr>
-    <td align="left" valign="top">
-    <div class="form-label">
-    Use Two-Phase Commit
+
+    <div class="zmi-controls">
+      <input class="btn btn-primary" type="submit" name="submit" value=" Save Changes " />
     </div>
-    </td>
-    <td align="left" valign="top">
-    <input type="checkbox" name="use_tpc" value="YES"
-      <dtml-if use_tpc>checked="YES"</dtml-if> />
-    </td>
-  </tr>
-  <tr>
-    <td align="left" valign="top">
-    <div class="form-label">
-    Encoding
-    </div>
-    </td>
-    <td align="left" valign="top">
-    <input type="text" name="encoding" size="40"
-           value="&dtml-encoding;" />
-    </td>
-  </tr>
-  <tr>
-    <td align="left" valign="top" colspan="2">
-    <div class="form-element">
-    <input class="form-element" type="submit" name="submit"
-     value=" Save Changes " />
-    </div>
-    </td>
-  </tr>
-</table>
-</form>
+  </form>
+
+</main>
 
 <dtml-var manage_page_footer>

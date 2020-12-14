@@ -62,7 +62,7 @@ def parse_date(s):
     """
     m = _dateFmt.match(s)
     if m is None:
-        raise ValueError, 'invalid date string: %s' % s
+        raise ValueError('invalid date string: %s' % s)
     year, month, day = m.groups()
     return int(year), int(month), int(day)
 
@@ -83,7 +83,7 @@ def parse_time(s):
     """
     m = _timeFmt.match(s)
     if m is None:
-        raise ValueError, 'invalid time string: %s' % s
+        raise ValueError('invalid time string: %s' % s)
     hr, mn, sc, msc = m.groups(0)
     if msc != 0:
         sc = float("%s.%s" % (sc, msc))
@@ -108,7 +108,7 @@ def parse_tz(s):
         return 0
     m = _tzFmt.match(s)
     if m is None:
-        raise ValueError, 'invalid time zone: %s' % s
+        raise ValueError('invalid time zone: %s' % s)
     d, hoff, moff = m.groups(0)
     if d == "-":
         return - int(hoff) * 60 - int(moff)
@@ -145,7 +145,7 @@ def _split_datetime(s):
     """
     m = _datetimeFmt.search(s)
     if m is None:
-        raise ValueError, 'time part of datetime missing: %s' % s
+        raise ValueError('time part of datetime missing: %s' % s)
     pos = m.start()
     return s[:pos], s[pos + 1:]
 
@@ -224,7 +224,7 @@ def parse_interval(s):
         elif unit == 'years':
             years += int(count)
         else:
-            raise ValueError, 'unknown time interval %s %s' % (count, unit)
+            raise ValueError('unknown time interval %s %s' % (count, unit))
     if len(elements) % 2 == 1:
         hours, minutes, seconds = parse_time(elements[-1])
     return (years, months, days, hours, minutes, seconds)
@@ -332,8 +332,8 @@ class Psycopg2Adapter(ZopeDatabaseAdapter):
                 self._v_connection = Psycopg2Connection(
                         self._connection_factory(), self
                         )
-            except psycopg2.Error, error:
-                raise DatabaseException, str(error)
+            except psycopg2.Error as error:
+                raise DatabaseException(str(error))
 
     def registerTypes(self):
         registerTypes(self.getEncoding())
@@ -343,7 +343,7 @@ class Psycopg2Adapter(ZopeDatabaseAdapter):
         self.registerTypes()
         conn_info = parseDSN(self.dsn)
         conn_list = []
-        for dsnname, optname in dsn2option_mapping.iteritems():
+        for dsnname, optname in dsn2option_mapping.items():
             if conn_info[dsnname]:
                 conn_list.append('%s=%s' % (optname, conn_info[dsnname]))
         conn_str = ' '.join(conn_list)
@@ -386,7 +386,7 @@ class Psycopg2Connection(ZopeConnection):
     def commit(self):
         try:
             ZopeConnection.commit(self)
-        except psycopg2.Error, error:
+        except psycopg2.Error as error:
             _handle_psycopg_exception(error)
 
 
@@ -396,13 +396,13 @@ class Psycopg2Cursor(ZopeCursor):
         """See IZopeCursor"""
         try:
             return ZopeCursor.execute(self, operation, parameters)
-        except psycopg2.Error, error:
+        except psycopg2.Error as error:
             _handle_psycopg_exception(error)
 
     def executemany(operation, seq_of_parameters=None):
         """See IZopeCursor"""
-        raise RuntimeError, 'Oos'
+        raise RuntimeError('Oos')
         try:
             return ZopeCursor.execute(self, operation, seq_of_parameters)
-        except psycopg2.Error, error:
+        except psycopg2.Error as error:
             _handle_psycopg_exception(error)

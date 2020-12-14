@@ -81,6 +81,8 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
     database_type = 'Psycopg2'
     meta_type = title = 'Z Psycopg 2 Database Connection'
     icon = 'misc_/conn'
+    zmi_icon = 'fas fa-database text-info'
+    zmi_show_add_dialog = True
 
     def __init__(self, id, title, connection_string,
                  zdatetime, check=None, tilevel=DEFAULT_TILEVEL,

@@ -16,39 +16,45 @@
 # their work without bothering about the module dependencies.
 
 
-import time
 import re
-
-import Acquisition
-import Shared.DC.ZRDB.Connection
-
-from db import DB
-from Globals import HTMLFile
-from ExtensionClass import Base
-from DateTime import DateTime
-
-# ImageFile is deprecated in Zope >= 2.9
-try:
-    from App.ImageFile import ImageFile
-except ImportError:
-    # Zope < 2.9.  If PIL's installed with a .pth file, we're probably
-    # hosed.
-    from ImageFile import ImageFile
-
-# import psycopg and functions/singletons needed for date/time conversions
+import time
+from operator import itemgetter
 
 import psycopg2
-from psycopg2 import NUMBER, STRING, ROWID, DATETIME
-from psycopg2.extensions import INTEGER, FLOAT, BOOLEAN, DATE
+import psycopg2.extensions
+from psycopg2 import DATETIME
+from psycopg2 import NUMBER
+from psycopg2 import ROWID
+from psycopg2 import STRING
+from psycopg2.extensions import BOOLEAN
+from psycopg2.extensions import DATE
+from psycopg2.extensions import FLOAT
+from psycopg2.extensions import INTEGER
 from psycopg2.extensions import TIME
 from psycopg2.extensions import new_type
 
-import psycopg2.extensions
+import Acquisition
+from AccessControl.class_init import InitializeClass
+from AccessControl.Permissions import change_database_methods
+from AccessControl.Permissions import use_database_methods
+from AccessControl.Permissions import view_management_screens
+from AccessControl.SecurityInfo import ClassSecurityInfo
+from App.special_dtml import DTMLFile
+from DateTime import DateTime
+from ExtensionClass import Base
+from Shared.DC.ZRDB.Connection import Connection as ConnectionBase
+
+from .db import DB
+
+
+# import psycopg and functions/singletons needed for date/time conversions
+
+
 DEFAULT_TILEVEL = psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ
 
 # add a new connection to a folder
 
-manage_addZPsycopgConnectionForm = HTMLFile('dtml/add', globals())
+manage_addZPsycopgConnectionForm = DTMLFile('dtml/add', globals())
 
 
 def manage_addZPsycopgConnection(self, id, title, connection_string,
@@ -63,14 +69,32 @@ def manage_addZPsycopgConnection(self, id, title, connection_string,
 
 # the connection object
 
-class Connection(Shared.DC.ZRDB.Connection.Connection):
+class Connection(ConnectionBase):
     """ZPsycopg Connection."""
     _isAnSQLConnection = 1
 
-    id = 'Psycopg2_database_connection'
     database_type = 'Psycopg2'
-    meta_type = title = 'Z Psycopg 2 Database Connection'
-    icon = 'misc_/conn'
+    meta_type = 'Z Psycopg 2 Database Connection'
+    security = ClassSecurityInfo()
+    zmi_icon = 'fas fa-database'
+    info = None
+
+    security.declareProtected(view_management_screens,  # NOQA: D001
+                              'manage_tables')
+    manage_tables = DTMLFile('dtml/tables', globals())
+
+    security.declareProtected(view_management_screens,  # NOQA: D001
+                              'manage_browse')
+    manage_browse = DTMLFile('dtml/browse', globals())
+
+    security.declareProtected(change_database_methods,  # NOQA: D001
+                              'manage_properties')
+    manage_properties = DTMLFile('dtml/edit', globals())
+    manage_properties._setName('manage_main')
+    manage_main = manage_properties
+
+    manage_options = (ConnectionBase.manage_options[1:] +
+                      ({'label': 'Browse', 'action': 'manage_browse'},))
 
     def __init__(self, id, title, connection_string,
                  zdatetime, check=None, tilevel=DEFAULT_TILEVEL,
@@ -80,24 +104,25 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
         self.edit(title, connection_string, zdatetime,
                   check=check, tilevel=tilevel, encoding=encoding)
 
+    @security.protected(use_database_methods)
     def factory(self):
         return DB
 
-    ## connection parameters editing ##
+    # connection parameter editing
 
+    @security.protected(change_database_methods)
     def edit(self, title, connection_string,
              zdatetime, check=None, tilevel=DEFAULT_TILEVEL, encoding='UTF-8'):
         self.title = title
         self.connection_string = connection_string
         self.zdatetime = zdatetime
-        self.tilevel = tilevel
+        self.tilevel = int(tilevel)
         self.encoding = encoding
 
         if check:
             self.connect(self.connection_string)
 
-    manage_properties = HTMLFile('dtml/edit', globals())
-
+    @security.protected(change_database_methods)
     def manage_edit(self, title, connection_string,
                     zdatetime=None, check=None, tilevel=DEFAULT_TILEVEL,
                     encoding='UTF-8', REQUEST=None):
@@ -108,10 +133,11 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
             msg = "Connection edited."
             return self.manage_main(self, REQUEST, manage_tabs_message=msg)
 
+    @security.protected(use_database_methods)
     def connect(self, s):
         try:
             self._v_database_connection.close()
-        except:
+        except Exception:
             pass
 
         # check psycopg version and raise exception if does not match
@@ -122,12 +148,14 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
 
         # TODO: let the psycopg exception propagate, or not?
         self._v_database_connection = dbf(
-            self.connection_string, self.tilevel, self.get_type_casts(), self.encoding)
+            self.connection_string, self.tilevel,
+            self.get_type_casts(), self.encoding)
         self._v_database_connection.open()
         self._v_connected = DateTime()
 
         return self
 
+    @security.protected(use_database_methods)
     def get_type_casts(self):
         # note that in both cases order *is* important
         if self.zdatetime:
@@ -135,17 +163,7 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
         else:
             return DATETIME, DATE, TIME
 
-    ## browsing and table/column management ##
-
-    manage_options = Shared.DC.ZRDB.Connection.Connection.manage_options
-    # + (
-    #    {'label': 'Browse', 'action':'manage_browse'},)
-
-    #manage_tables = HTMLFile('dtml/tables', globals())
-    #manage_browse = HTMLFile('dtml/browse', globals())
-
-    info = None
-
+    @security.protected(view_management_screens)
     def table_info(self):
         return self._v_database_connection.table_info()
 
@@ -156,24 +174,25 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
             return self._v_tables.__of__(self)
         raise KeyError(name)
 
+    @security.protected(view_management_screens)
     def tpValues(self):
         res = []
         conn = self._v_database_connection
-        for d in conn.tables(rdb=0):
+        for d in sorted(conn.tables(rdb=0), key=itemgetter('TABLE_NAME')):
             try:
                 name = d['TABLE_NAME']
                 b = TableBrowser()
                 b.__name__ = name
                 b._d = d
                 b._c = conn
-                try:
-                    b.icon = table_icons[d['TABLE_TYPE']]
-                except:
-                    pass
+                b.icon = table_icons.get(d['TABLE_TYPE'], 'text')
                 res.append(b)
-            except:
+            except Exception:
                 pass
         return res
+
+
+InitializeClass(Connection)
 
 
 def check_psycopg_version(version):
@@ -183,7 +202,7 @@ def check_psycopg_version(version):
     try:
         m = re.match(r'\d+\.\d+(\.\d+)?', version.split(' ')[0])
         tver = tuple(map(int, m.group().split('.')))
-    except:
+    except Exception:
         raise ImportError("failed to parse psycopg version %s" % version)
 
     if tver < (2, 4):
@@ -193,7 +212,7 @@ def check_psycopg_version(version):
         raise ImportError("psycopg version %s is known to be buggy" % version)
 
 
-## database connection registration data ##
+# database connection registration data
 
 classes = (Connection,)
 
@@ -208,16 +227,8 @@ __ac_permissions__ = (
     ('Add Z Psycopg Database Connections',
      ('manage_addZPsycopgConnectionForm', 'manage_addZPsycopgConnection')),)
 
-# add icons
 
-misc_ = {'conn': ImageFile('icons/DBAdapterFolder_icon.gif', globals())}
-
-for icon in ('table', 'view', 'stable', 'what', 'field', 'text', 'bin',
-             'int', 'float', 'date', 'time', 'datetime'):
-    misc_[icon] = ImageFile('icons/%s.gif' % icon, globals())
-
-
-## zope-specific psycopg typecasters ##
+# zope-specific psycopg typecasters
 
 # convert an ISO timestamp string from postgres to a Zope DateTime object
 def _cast_DateTime(iso, curs):
@@ -256,17 +267,14 @@ def _cast_Time(iso, curs):
 def _cast_Interval(iso, curs):
     return iso
 
+
 ZDATETIME = new_type((1184, 1114), "ZDATETIME", _cast_DateTime)
 ZINTERVAL = new_type((1186,), "ZINTERVAL", _cast_Interval)
 ZDATE = new_type((1082,), "ZDATE", _cast_Date)
 ZTIME = new_type((1083,), "ZTIME", _cast_Time)
 
 
-## table browsing helpers ##
-
-class TableBrowserCollection(Acquisition.Implicit):
-    pass
-
+# table browsing helpers
 
 class Browser(Base):
     def __getattr__(self, name):
@@ -292,8 +300,8 @@ class values:
 class TableBrowser(Browser, Acquisition.Implicit):
     icon = 'what'
     Description = check = ''
-    info = HTMLFile('table_info', globals())
-    menu = HTMLFile('table_menu', globals())
+    info = DTMLFile('dtml/table_info', globals())
+    __allow_access_to_unprotected_subobjects__ = 1
 
     def tpValues(self):
         v = values()
@@ -303,12 +311,12 @@ class TableBrowser(Browser, Acquisition.Implicit):
     def tpValues_(self):
         r = []
         tname = self.__name__
-        for d in self._c.columns(tname):
+        for d in sorted(self._c.columns(tname), key=itemgetter('name')):
             b = ColumnBrowser()
             b._d = d
             try:
-                b.icon = field_icons[d['Type']]
-            except:
+                b.icon = field_icons[d['type'].name]
+            except Exception:
                 pass
             b.TABLE_NAME = tname
             r.append(b)
@@ -325,8 +333,6 @@ class TableBrowser(Browser, Acquisition.Implicit):
 
     def Type(self):
         return self._d['TABLE_TYPE']
-
-    manage_designInput = HTMLFile('designInput', globals())
 
     @staticmethod
     def vartype(inVar):
@@ -362,7 +368,7 @@ class TableBrowser(Browser, Acquisition.Implicit):
                 values.append("<dtml-sqlvar %s type=%s>'" %
                               (n, self.vartype(t)))
             else:
-                if isinstance(t, basestring):
+                if isinstance(t, str):
                     if d.find("\'") >= 0:
                         d = "''".join(d.split("\'"))
                     values.append("'%s'" % d)
@@ -378,29 +384,34 @@ class ColumnBrowser(Browser):
 
     def check(self):
         return ('\t<input type=checkbox name="%s.%s">' %
-                (self.TABLE_NAME, self._d['Name']))
+                (self.TABLE_NAME, self._d['name']))
 
     def tpId(self):
-        return self._d['Name']
+        return self._d['name']
 
     def tpURL(self):
-        return "Column/%s" % self._d['Name']
+        return "Column/%s" % self._d['name']
+
+    def Name(self):
+        return self._d['name']
 
     def Description(self):
         d = self._d
-        if d['Scale']:
-            return " %(Type)s(%(Precision)s,%(Scale)s) %(Nullable)s" % d
+        d['type_name'] = d['type'].name
+        if d['scale']:
+            return " %(type_name)s(%(precision)s,%(scale)s) %(null)s" % d
         else:
-            return " %(Type)s(%(Precision)s) %(Nullable)s" % d
+            return " %(type_name)s(%(precision)s) %(null)s" % d
+
 
 table_icons = {
     'TABLE': 'table',
-    'VIEW': 'view',
+    'VIEW': 'db_view',
     'SYSTEM_TABLE': 'stable',
 }
 
 field_icons = {
-    NUMBER.name: 'i',
+    NUMBER.name: 'int',
     STRING.name: 'text',
     DATETIME.name: 'date',
     INTEGER.name: 'int',

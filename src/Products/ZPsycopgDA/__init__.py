@@ -15,16 +15,26 @@
 # Import modules needed by _psycopg to allow tools like py2exe to do
 # their work without bothering about the module dependencies.
 
-__doc__ = "ZPsycopg Database Adapter Registration."
-__version__ = '2.4.7.dev1'
+import os
 
-import DA
+from App.ImageFile import ImageFile
+
+from .DA import Connection
+from .DA import manage_addZPsycopgConnection
+from .DA import manage_addZPsycopgConnectionForm
+from .permissions import add_zpsycopgda_database_connections
 
 
 def initialize(context):
     context.registerClass(
-        DA.Connection,
-        permission='Add Z Psycopg 2 Database Connections',
-        constructors=(DA.manage_addZPsycopgConnectionForm,
-                      DA.manage_addZPsycopgConnection),
-        icon = 'icons/DBAdapterFolder_icon.gif')
+        Connection,
+        permission=add_zpsycopgda_database_connections,
+        constructors=(manage_addZPsycopgConnectionForm,
+                      manage_addZPsycopgConnection),
+        icon='icons/DBAdapterFolder_icon.gif')
+
+
+misc_ = {}
+for icon in ('table', 'db_view', 'stable', 'what', 'field', 'text', 'bin',
+             'int', 'float', 'date', 'time', 'datetime'):
+    misc_[icon] = ImageFile(os.path.join('icons', '%s.svg') % icon, globals())

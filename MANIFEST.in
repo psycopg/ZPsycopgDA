@@ -1,3 +1,9 @@
-include CONTRIBUTORS.txt CHANGES.txt README.rst LICENSE
-recursive-include ZPsycopgDA/dtml *
-recursive-include ZPsycopgDA/icons *
+include *.rst
+include *.txt
+include tox.ini
+include Makefile
+
+recursive-include src *.py
+recursive-include src *.dtml
+recursive-include src *.gif
+recursive-include src *.svg

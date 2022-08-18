@@ -1,57 +1,75 @@
+import os
+
+from setuptools import find_packages
 from setuptools import setup
 
-# Get the version number from the package
-f = open('ZPsycopgDA/__init__.py')
-try:
-    for line in f:
-        if line.startswith('__version__'):
-            version = line.split()[-1].replace("'", "")
-            break
-    else:
-        raise ValueError('__version__ not found')
-finally:
-    f.close()
+
+def _read(filename):
+    with open(os.path.join(os.path.dirname(__file__), filename)) as fp:
+        return fp.read()
+
 
 long_description = (
-    open('README.rst').read()
+    _read('README.rst')
     + '\n' +
     'Contributors\n'
     '============\n'
     + '\n' +
-    open('CONTRIBUTORS.txt').read()
+    _read('CONTRIBUTORS.txt')
     + '\n' +
-    open('CHANGES.txt').read()
+    _read('CHANGES.txt')
     + '\n'
 )
 
 setup(
-    name='ZPsycopgDA',
-    version=version,
-    description="Zope bindings for psycopg2.",
-    long_description=long_description,
-    # Get more strings from
-    # http://pypi.python.org/pypi?%3Aaction=list_classifiers
-    classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "Programming Language :: Python",
-        "Framework :: Zope2",
-        "License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)",
-        "Topic :: Database",
-    ],
-    keywords='',
+    name='Products.ZPsycopgDA',
+    version='2.5.0.dev0',
+    license='ZPL 2.1',
+    license_files=['LICENSE*'],
     author='Federico Di Gregorio',
     author_email='fog@initd.org',
-    url='http://initd.org/psycopg/',
-    license='GPL with exceptions or ZPL',
-    packages=['ZPsycopgDA'],
-    package_dir={'': '.'},
-    package_data={'ZPsycopgDA': ['dtml/*', 'icons/*']},
+    maintainer='Jens Vagelpohl',
+    maintainer_email='jens@dataflake.org',
+    url='https://github.com/dataflake/Products.ZPsycopgDA',
+    project_urls={
+        'Issue Tracker': ('https://github.com/dataflake'
+                          '/Products.ZPsycopgDA/issues'),
+        'Sources': 'https://github.com/zopefoundation/Products.ZPsycopgDA',
+    },
+    description='Zope database adapter for PostGreSQL',
+    long_description=long_description,
+    classifiers=[
+        'Development Status :: 5 - Production/Stable',
+        'Environment :: Web Environment',
+        'Framework :: Zope',
+        'Framework :: Zope :: 4',
+        'Framework :: Zope :: 5',
+        'License :: OSI Approved :: Zope Public License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10'
+        'Programming Language :: Python :: Implementation :: CPython',
+        'Topic :: Database',
+        'Topic :: Database :: Front-Ends',
+    ],
+    packages=find_packages('src'),
+    include_package_data=True,
+    namespace_packages=['Products'],
+    package_dir={'': 'src'},
     zip_safe=False,
+    python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*',
     install_requires=[
         'setuptools',
-        # -*- Extra requirements: -*-
+        'psycopg2',
+        'Zope',
+        'Products.ZSQLMethods',
     ],
-    entry_points="""
-    # -*- Entry points: -*-
-    """,
 )

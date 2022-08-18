@@ -15,17 +15,26 @@
 # Import modules needed by _psycopg to allow tools like py2exe to do
 # their work without bothering about the module dependencies.
 
-from Shared.DC.ZRDB.TM import TM
-from Shared.DC.ZRDB import dbi_db
-
-from ZODB.POSException import ConflictError
-
-import pool
+import logging
 
 import psycopg2
-from psycopg2.extensions import INTEGER, LONGINTEGER, BOOLEAN, DATE, TIME
-from psycopg2.extensions import TransactionRollbackError, register_type
-from psycopg2 import NUMBER, STRING, ROWID, DATETIME
+from psycopg2 import DATETIME
+from psycopg2 import NUMBER
+from psycopg2 import ROWID
+from psycopg2 import STRING
+from psycopg2.extensions import BOOLEAN
+from psycopg2.extensions import DATE
+from psycopg2.extensions import INTEGER
+from psycopg2.extensions import LONGINTEGER
+from psycopg2.extensions import TIME
+from psycopg2.extensions import TransactionRollbackError
+from psycopg2.extensions import register_type
+
+from Shared.DC.ZRDB import dbi_db
+from Shared.DC.ZRDB.TM import TM
+from ZODB.POSException import ConflictError
+
+from . import pool
 
 
 # the DB object, managing all the real query work
@@ -127,7 +136,7 @@ class DB(TM, dbi_db.DB):
             })
         return items
 
-    ## tables and rows ##
+    # tables and rows
 
     def tables(self, rdb=0, _care=('TABLE', 'VIEW')):
         self._register()
@@ -153,12 +162,12 @@ class DB(TM, dbi_db.DB):
         c = self.getcursor()
         try:
             c.execute('SELECT * FROM "%s" WHERE 1=0' % table_name)
-        except:
+        except Exception:
             return ()
         self.putconn()
         return self.convert_description(c.description, True)
 
-    ## query execution ##
+    # query execution
 
     def query(self, query_string, max_rows=None, query_data=None):
         self._register()
@@ -178,16 +187,22 @@ class DB(TM, dbi_db.DB):
                     else:
                         c.execute(qs)
                 except TransactionRollbackError:
-                    # Ha, here we have to look like we are the ZODB raising conflict errrors, raising ZPublisher.Publish.Retry just doesn't work
-                    #logging.debug("Serialization Error, retrying transaction", exc_info=True)
-                    raise ConflictError("TransactionRollbackError from psycopg2")
+                    # Ha, here we have to look like we are the ZODB raising
+                    # conflict errrors, raising ZPublisher.Publish.Retry just
+                    # doesn't work
+                    logging.debug("Serialization Error, retrying transaction",
+                                  exc_info=True)
+                    msg = 'TransactionRollbackError from psycopg2'
+                    raise ConflictError(msg)
                 except psycopg2.OperationalError:
-                    #logging.exception("Operational error on connection, closing it.")
+                    msg = 'Operational error on connection, closing it.'
+                    logging.exception(msg)
                     try:
                         # Only close our connection
                         self.putconn(True)
-                    except:
-                        #logging.debug("Something went wrong when we tried to close the pool", exc_info=True)
+                    except Exception:
+                        logging.debug("Exception while closing pool",
+                                      exc_info=True)
                         pass
                 if c.description is not None:
                     nselects += 1
@@ -201,7 +216,7 @@ class DB(TM, dbi_db.DB):
                     desc = c.description
             self.failures = 0
 
-        except StandardError, err:
+        except Exception as err:
             self._abort()
             raise err
 

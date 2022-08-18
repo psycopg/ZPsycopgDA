@@ -19,8 +19,15 @@
 # ZPsycopgDA code in db.py.
 
 import threading
+
 import psycopg2
 from psycopg2.pool import PoolError
+
+
+try:
+    from threading import get_ident
+except ImportError:  # Python 2
+    from _thread import get_ident
 
 
 class AbstractConnectionPool(object):
@@ -115,7 +122,7 @@ class AbstractConnectionPool(object):
         for conn in self._pool + list(self._used.values()):
             try:
                 conn.close()
-            except:
+            except Exception:
                 pass
         self.closed = True
 
@@ -137,14 +144,9 @@ class PersistentConnectionPool(AbstractConnectionPool):
             self, minconn, maxconn, *args, **kwargs)
         self._lock = threading.Lock()
 
-        # we we'll need the thread module, to determine thread ids, so we
-        # import it here and copy it in an instance variable
-        import thread
-        self.__thread = thread
-
     def getconn(self):
         """Generate thread id and return a connection."""
-        key = self.__thread.get_ident()
+        key = get_ident()
         self._lock.acquire()
         try:
             return self._getconn(key)
@@ -153,7 +155,7 @@ class PersistentConnectionPool(AbstractConnectionPool):
 
     def putconn(self, conn=None, close=False):
         """Put away an unused connection."""
-        key = self.__thread.get_ident()
+        key = get_ident()
         self._lock.acquire()
         try:
             if not conn:

@@ -32,6 +32,7 @@ setup(
     maintainer_email='jens@dataflake.org',
     url='https://github.com/dataflake/Products.ZPsycopgDA',
     project_urls={
+        'Documentation': 'https://zpsycopgda.readthedocs.io',
         'Issue Tracker': ('https://github.com/dataflake'
                           '/Products.ZPsycopgDA/issues'),
         'Sources': 'https://github.com/zopefoundation/Products.ZPsycopgDA',

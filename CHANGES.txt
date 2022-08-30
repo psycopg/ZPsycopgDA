@@ -4,11 +4,14 @@ Changelog
 3.0 (unreleased)
 ----------------
 
+- Re-released under the Zope Public License (ZPL) version 2.1
+
 - Updated package layout and name to conform to current Zope standards
 
 - Added compatibility with Zope 4 and Zope 5
 
 - Removed compatibility with Zope 2 and Zope 3
+
 
 2.4.7
 -----

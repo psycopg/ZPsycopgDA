@@ -30,7 +30,6 @@ from psycopg2.extensions import TIME
 from psycopg2.extensions import TransactionRollbackError
 from psycopg2.extensions import register_type
 
-from Shared.DC.ZRDB import dbi_db
 from Shared.DC.ZRDB.TM import TM
 from ZODB.POSException import ConflictError
 
@@ -39,9 +38,11 @@ from . import pool
 
 # the DB object, managing all the real query work
 
-class DB(TM, dbi_db.DB):
+class DB(TM):
 
-    _p_oid = _p_changed = _registered = None
+    _p_oid = _p_changed = None
+    _registered = False
+    _sort_key = '1'
 
     def __init__(self, dsn, tilevel, typecasts, enc='utf-8'):
         self.dsn = dsn
@@ -60,12 +61,7 @@ class DB(TM, dbi_db.DB):
         # connection, so we avoid to (re)initialize it risking errors.
         conn = pool.getconn(self.dsn)
         if init:
-            # use set_session where available as in these versions
-            # set_isolation_level generates an extra query.
-            if psycopg2.__version__ >= '2.4.2':
-                conn.set_session(isolation_level=int(self.tilevel))
-            else:
-                conn.set_isolation_level(int(self.tilevel))
+            conn.set_session(isolation_level=int(self.tilevel))
             conn.set_client_encoding(self.encoding)
             for tc in self.typecasts:
                 register_type(tc, conn)
@@ -108,9 +104,6 @@ class DB(TM, dbi_db.DB):
         # FIXME: if this connection is closed we flush all the pool associated
         # with the current DSN; does this makes sense?
         pool.flushpool(self.dsn)
-
-    def sortKey(self):
-        return 1
 
     def make_mappings(self):
         """Generate the mappings used later by self.convert_description()."""

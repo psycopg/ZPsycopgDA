@@ -41,7 +41,8 @@ class DBTests(unittest.TestCase):
         # class-level values
         self.assertIsNone(db._p_oid)
         self.assertIsNone(db._p_changed)
-        self.assertIsNone(db._registered)
+        self.assertFalse(db._registered)
+        self.assertEqual(db._sort_key, '1')
 
         # type mappings initialization
         self.assertTrue(db.type_mappings)
@@ -55,4 +56,4 @@ class DBTests(unittest.TestCase):
     def test_sortKey(self):
         db = self._makeOne('dsn', 'tilevel', 'typecasts')
 
-        self.assertEqual(db.sortKey(), 1)
+        self.assertEqual(db.sortKey(), '1')

@@ -1,8 +1,7 @@
-#!/usr/bin/env python
+# testutils.py - utility module for psycopg2 testing.
 
-# psycopg2 test suite
 #
-# Copyright (C) 2007-2011 Federico Di Gregorio  <fog@debian.org>
+# Copyright (C) 2010-2011 Daniele Varrazzo  <daniele.varrazzo@gmail.com>
 #
 # psycopg2 is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License as published
@@ -22,30 +21,21 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
 # License for more details.
 
-import sys
-from testconfig import dsn
-from testutils import unittest
 
-def test_suite():
-    # If connection to test db fails, bail out early.
-    import psycopg2
+import psycopg2
+
+from . import DSN
+
+
+def connect(dsn=DSN):
+    return psycopg2.connect(dsn)
+
+
+def have_test_database():
     try:
-        cnn = psycopg2.connect(dsn)
-    except Exception, e:
-        print "Failed connection to test db:", e.__class__.__name__, e
-        print "Please set env vars 'PSYCOPG2_TESTDB_DSN' to valid values."
-        sys.exit(1)
-    else:
-        cnn.close()
-
-    suite = unittest.TestSuite()
-
-    import test_da_threading
-    suite.addTest(test_da_threading.test_suite())
-    import test_xn_reset
-    suite.addTest(test_xn_reset.test_suite())
-
-    return suite
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='test_suite')
+        conn = connect()
+        conn.close()
+        return True
+    except psycopg2.OperationalError:
+        # import traceback; traceback.print_exc()
+        return False

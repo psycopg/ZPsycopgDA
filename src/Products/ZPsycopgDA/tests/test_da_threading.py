@@ -5,28 +5,33 @@
 # done for first connection. When there are multiple threads running in
 # parallel, connections where used which had not been initialized correctly.
 
-from Products.ZPsycopgDA.DA import ZDATETIME
-from Products.ZPsycopgDA.db import DB
 import threading
+import unittest
 
-import testconfig
+from ..DA import ZDATETIME
+from ..db import DB
+from . import DSN
+from . import NO_DB_MSG
+from .utils import have_test_database
 
-from testutils import unittest
 
+@unittest.skipUnless(have_test_database(), NO_DB_MSG)
 class DaThreadingTests(unittest.TestCase):
     def test_threading(self):
 
         typecasts = [ZDATETIME]
 
         def DA_connect():
-            db = DB(testconfig.dsn, tilevel=2, typecasts=typecasts)
+            db = DB(DSN, tilevel=2, typecasts=typecasts)
             db.open()
             return db
 
         failures = []
 
         def assert_casts(conn, name):
-            connection = conn.getcursor().connection
+            # connection = conn.getcursor().connection
+            # See https://github.com/psycopg/psycopg2/issues/155
+            connection = conn.getconn().cursor().connection
             if (connection.string_types !=
                     {1114: ZDATETIME, 1184: ZDATETIME}):
                 failures.append(
@@ -44,12 +49,6 @@ class DaThreadingTests(unittest.TestCase):
             t1.join()
             t2.join()
 
-            self.assert_(not failures, failures)
+            self.assertFalse(failures)
         finally:
             conn1.close()
-
-def test_suite():
-    return unittest.TestLoader().loadTestsFromName(__name__)
-
-if __name__ == "__main__":
-    unittest.main()

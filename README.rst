@@ -4,6 +4,14 @@ Products.ZPsycopgDA
 .. image:: https://github.com/dataflake/Products.ZPsycopgDA/actions/workflows/tests.yml/badge.svg
    :target: https://github.com/dataflake/Products.ZPsycopgDA/actions/workflows/tests.yml
 
+.. image:: https://coveralls.io/repos/github/dataflake/Products.ZPsycopgDA/badge.svg?branch=master
+   :target: https://coveralls.io/github/dataflake/Products.ZPsycopgDA?branch=master
+
+.. image:: https://readthedocs.org/projects/zpsycopgda/badge/?version=latest
+   :target: https://zpsycopgda.readthedocs.io
+   :alt: Documentation Status
+
+
 This is a Zope database adapter for PostGreSQL based on psycopg2__ for Zope 4
 and up on all Python versions supported by Zope 4 and 5.
 

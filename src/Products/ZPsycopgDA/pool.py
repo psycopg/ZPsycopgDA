@@ -27,7 +27,7 @@ from psycopg2.pool import PoolError
 try:
     from threading import get_ident
 except ImportError:  # Python 2
-    from _thread import get_ident
+    from thread import get_ident
 
 
 class AbstractConnectionPool(object):

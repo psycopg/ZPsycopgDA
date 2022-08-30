@@ -23,7 +23,7 @@ long_description = (
 
 setup(
     name='Products.ZPsycopgDA',
-    version='2.5.0.dev0',
+    version='3.0.0.dev0',
     license='ZPL 2.1',
     license_files=['LICENSE*'],
     author='Federico Di Gregorio',
@@ -73,4 +73,7 @@ setup(
         'Zope',
         'Products.ZSQLMethods',
     ],
+    extras_require={
+        'docs': ['Sphinx', 'sphinx_rtd_theme'],
+    },
 )

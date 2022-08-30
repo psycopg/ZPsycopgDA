@@ -9,6 +9,7 @@ Narrative documentation
    usage_zmi
    development
    changes
+   contributors
 
 
 Indices and tables

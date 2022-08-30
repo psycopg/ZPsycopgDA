@@ -13,34 +13,16 @@ Properties
 ----------
 Edit the database connection attributes and apply any changes:
 
+* `Id` (read only): The database adapter ZODB ID.
 * `Title`: An optional title that shows up in the :term:`ZMI`.
 * `Database Connection String`: A string encapsulating how to connect
-  to the database. See :ref:`connection-string` for details.
+  to the database.
 * `Connect immediately`: Should the database connection be established
   immediately or when the first database query is run.
-* `Unicode Support`: If set to ``True``, values from columns of type
-  ``CHAR``, ``VARCHAR`` and ``TEXT`` are returned as unicode strings by the
-  database backend.
-* `Character set`: Query results will be encoded in the character set
-  specified here:
-
-  * `Not set` will emulate previous releases' behavior on Python 2, which
-    used Latin-1 (ISO 8859-1), but if `Unicode results` is selected, the
-    connection character set switches to UTF-8 and strings in query results
-    are decoded to Unicode. On Python 3, `not set` always defaults to
-    UTF-8.
-
-  * For Python 2, you can force the character set to Latin-1 or UTF-8,
-    regardless of the `Unicode results` setting. This is useful
-    when your application wants to use UTF-8, but cannot deal with unicode
-    return values.
-
-  * **On Python 3, forcing the character set to Latin1 is not supported.**
-
-* `Automatically create database`: If the `Database Connection String`
-  refers to a database that does not yet exist `and` this setting is
-  activated, the ZMySQLDA connector will attempt to create the
-  database.
+* `Use Zope's internal DateTime`: Check this box to always convert PostgreSQL
+  data/time values to instances of the Zope ``DateTime`` class.
+* `Transaction isolation level`: The database transaction isolation level.
+* `Encoding`: The character encoding used by the database.
 
 Test
 ----
@@ -51,18 +33,6 @@ sent back from the database.
 Security
 --------
 Change the :term:`Zope` role to permission mappings here.
-
-Undo
-----
-If your particular :term:`ZODB` flavor supports it, you can undo
-:term:`Zope` transactions affecting the database connector object here.
-These transactions don't reflect relational database transactions in the
-underlying MySQL or MariaDB databases, only :term:`ZODB` transactions.
-
-Ownership
----------
-Information about the :term:`Zope` user who owns the database connector
-object. Ownership in the :term:`Zope` sense confers additional rights.
 
 Interfaces
 ----------

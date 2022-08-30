@@ -1,3 +1,7 @@
+Contributors
+============
+
 - Federico Di Georgio: Original Author
 - Daniele Varrazzo: Separate ZPsycopgDA project
 - Rijk Stofberg: Eggifying
+- Jens Vagelpohl: Compatibility with Zope 4 and up; drop Zope 2 and Zope 3

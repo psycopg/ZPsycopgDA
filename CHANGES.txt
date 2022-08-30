@@ -1,20 +1,29 @@
 Changelog
 =========
 
+3.0 (unreleased)
+----------------
+
+- Updated package layout and name to conform to current Zope standards
+
+- Added compatibility with Zope 4 and Zope 5
+
+- Removed compatibility with Zope 2 and Zope 3
+
 2.4.7
--------------------
+-----
 
 - Removed ZPsycopgDA dependencies on deprecated (Python or Zope) features.
 
 
 2.4.6
--------------------
+-----
 
 - Added all the supported isolation level options
 - Fixed pool bugs (psycopg issues #123, #125, #142)
 
 
 2.4.4
--------------------
+-----
 
 - Make this and egg.

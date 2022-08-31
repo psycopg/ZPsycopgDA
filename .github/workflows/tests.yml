@@ -52,8 +52,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install tox
         sudo systemctl start postgresql.service
-        echo "CREATE USER zpsycopgdatest WITH PASSWORD 'zpsycopgdatest';" | psql postgres
-        echo 'CREATE DATABASE zpsycopgdatest;' | psql postgres
+        psql postgres postgres -c "CREATE USER zpsycopgdatest WITH PASSWORD 'zpsycopgdatest';"
+        psql postgres postgres -c 'CREATE DATABASE zpsycopgdatest;'
     - name: Test
       run: tox -e ${{ matrix.config[1] }}
     - name: Coverage

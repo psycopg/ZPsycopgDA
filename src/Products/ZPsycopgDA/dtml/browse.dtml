@@ -7,8 +7,9 @@
 <main class="container-fluid">
 
 <dtml-tree header=info>
-  <img src="&dtml-SCRIPT_NAME;/misc_/ZPsycopgDA/&dtml-icon;" alt="&dtml-Type;" title="&dtml-Type;" style="height:16px;width:20px;" />
-  <b><dtml-var Name></b>&nbsp;&nbsp;<code><dtml-var Description></code>
+  <img src="&dtml-SCRIPT_NAME;/misc_/ZPsycopgDA/&dtml-icon;" alt="&dtml-type;" title="&dtml-type;" style="height:16px;width:20px;" />
+  <b><dtml-var name></b>&nbsp;&nbsp;
+  <code>&dtml-type;<dtml-if owner> owned by &dtml-owner;</dtml-if></code>
 </dtml-tree>
 
 </main>

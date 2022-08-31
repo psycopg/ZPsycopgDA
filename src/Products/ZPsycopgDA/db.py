@@ -34,6 +34,8 @@ from Shared.DC.ZRDB.TM import TM
 from ZODB.POSException import ConflictError
 
 from . import pool
+from .utils import SHOW_COLUMNS_SQL
+from .utils import SHOW_TABLES_SQL
 
 
 # the DB object, managing all the real query work
@@ -134,19 +136,13 @@ class DB(TM):
     def tables(self, rdb=0, _care=('TABLE', 'VIEW')):
         self._register()
         c = self.getcursor()
-        c.execute(
-            "SELECT t.tablename AS NAME, 'TABLE' AS TYPE "
-            "  FROM pg_tables t WHERE tableowner <> 'postgres' "
-            "UNION SELECT v.viewname AS NAME, 'VIEW' AS TYPE "
-            "  FROM pg_views v WHERE viewowner <> 'postgres' "
-            "UNION SELECT t.tablename AS NAME, 'SYSTEM_TABLE\' AS TYPE "
-            "  FROM pg_tables t WHERE tableowner = 'postgres' "
-            "UNION SELECT v.viewname AS NAME, 'SYSTEM_TABLE' AS TYPE "
-            "FROM pg_views v WHERE viewowner = 'postgres'")
+        c.execute(SHOW_TABLES_SQL)
         res = []
-        for name, typ in c.fetchall():
+        for name, owner, typ in c.fetchall():
             if typ in _care:
-                res.append({'TABLE_NAME': name, 'TABLE_TYPE': typ})
+                res.append({'table_name': name,
+                            'owner': owner,
+                            'table_type': typ})
         self.putconn()
         return res
 
@@ -154,11 +150,17 @@ class DB(TM):
         self._register()
         c = self.getcursor()
         try:
-            c.execute('SELECT * FROM "%s" WHERE 1=0' % table_name)
+            c.execute(SHOW_COLUMNS_SQL % table_name)
         except Exception:
             return ()
+        res = []
+        for name, c_type, short_type in c.fetchall():
+            res.append({'name': name,
+                        'type': c_type,
+                        'owner': '',
+                        'short_type': short_type})
         self.putconn()
-        return self.convert_description(c.description, True)
+        return res
 
     # query execution
 

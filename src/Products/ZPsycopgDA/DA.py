@@ -16,24 +16,14 @@
 # their work without bothering about the module dependencies.
 
 
-import re
-import time
 from operator import itemgetter
 
 import psycopg2
-import psycopg2.extensions
 from psycopg2 import DATETIME
-from psycopg2 import NUMBER
-from psycopg2 import ROWID
-from psycopg2 import STRING
-from psycopg2.extensions import BOOLEAN
 from psycopg2.extensions import DATE
-from psycopg2.extensions import FLOAT
-from psycopg2.extensions import INTEGER
+from psycopg2.extensions import ISOLATION_LEVEL_REPEATABLE_READ
 from psycopg2.extensions import TIME
-from psycopg2.extensions import new_type
 
-import Acquisition
 from AccessControl.class_init import InitializeClass
 from AccessControl.Permissions import change_database_methods
 from AccessControl.Permissions import use_database_methods
@@ -41,18 +31,17 @@ from AccessControl.Permissions import view_management_screens
 from AccessControl.SecurityInfo import ClassSecurityInfo
 from App.special_dtml import DTMLFile
 from DateTime import DateTime
-from ExtensionClass import Base
 from Shared.DC.ZRDB.Connection import Connection as ConnectionBase
 
 from .db import DB
+from .utils import ZDATE
+from .utils import ZDATETIME
+from .utils import ZTIME
+from .utils import TableBrowser
+from .utils import table_icons
 
 
-# import psycopg and functions/singletons needed for date/time conversions
-
-
-DEFAULT_TILEVEL = psycopg2.extensions.ISOLATION_LEVEL_REPEATABLE_READ
-
-# add a new connection to a folder
+DEFAULT_TILEVEL = ISOLATION_LEVEL_REPEATABLE_READ
 
 manage_addZPsycopgConnectionForm = DTMLFile('dtml/add', globals())
 
@@ -66,8 +55,6 @@ def manage_addZPsycopgConnection(self, id, title, connection_string,
     if REQUEST is not None:
         return self.manage_main(self, REQUEST)
 
-
-# the connection object
 
 class Connection(ConnectionBase):
     """ZPsycopg Connection."""
@@ -139,9 +126,6 @@ class Connection(ConnectionBase):
         except Exception:
             pass
 
-        # check psycopg version and raise exception if does not match
-        check_psycopg_version(psycopg2.__version__)
-
         self._v_connected = ''
         dbf = self.factory()
 
@@ -163,28 +147,16 @@ class Connection(ConnectionBase):
             return DATETIME, DATE, TIME
 
     @security.protected(view_management_screens)
-    def table_info(self):
-        return self._v_database_connection.table_info()
-
-    def __getitem__(self, name):
-        if name == 'tableNamed':
-            if not hasattr(self, '_v_tables'):
-                self.tpValues()
-            return self._v_tables.__of__(self)
-        raise KeyError(name)
-
-    @security.protected(view_management_screens)
     def tpValues(self):
         res = []
         conn = self._v_database_connection
-        for d in sorted(conn.tables(rdb=0), key=itemgetter('TABLE_NAME')):
+        for d in sorted(conn.tables(rdb=0), key=itemgetter('table_name')):
             try:
-                name = d['TABLE_NAME']
                 b = TableBrowser()
-                b.__name__ = name
+                b.__name__ = d['table_name']
                 b._d = d
                 b._c = conn
-                b.icon = table_icons.get(d['TABLE_TYPE'], 'text')
+                b.icon = table_icons.get(d['table_type'], 'text')
                 res.append(b)
             except Exception:
                 pass
@@ -192,229 +164,3 @@ class Connection(ConnectionBase):
 
 
 InitializeClass(Connection)
-
-
-def check_psycopg_version(version):
-    """
-    Check that the psycopg version used is compatible with the zope adpter.
-    """
-    try:
-        m = re.match(r'\d+\.\d+(\.\d+)?', version.split(' ')[0])
-        tver = tuple(map(int, m.group().split('.')))
-    except Exception:
-        raise ImportError("failed to parse psycopg version %s" % version)
-
-    if tver < (2, 4):
-        raise ImportError("psycopg version %s is too old" % version)
-
-    if tver in ((2, 4, 2), (2, 4, 3)):
-        raise ImportError("psycopg version %s is known to be buggy" % version)
-
-
-# database connection registration data
-
-classes = (Connection,)
-
-meta_types = ({'name': 'Z Psycopg 2 Database Connection',
-               'action': 'manage_addZPsycopgConnectionForm'},)
-
-folder_methods = {
-    'manage_addZPsycopgConnection': manage_addZPsycopgConnection,
-    'manage_addZPsycopgConnectionForm': manage_addZPsycopgConnectionForm}
-
-__ac_permissions__ = (
-    ('Add Z Psycopg Database Connections',
-     ('manage_addZPsycopgConnectionForm', 'manage_addZPsycopgConnection')),)
-
-
-# zope-specific psycopg typecasters
-
-# convert an ISO timestamp string from postgres to a Zope DateTime object
-def _cast_DateTime(iso, curs):
-    if iso:
-        if iso in ['-infinity', 'infinity']:
-            return iso
-        else:
-            return DateTime(iso)
-
-
-# convert an ISO date string from postgres to a Zope DateTime object
-def _cast_Date(iso, curs):
-    if iso:
-        if iso in ['-infinity', 'infinity']:
-            return iso
-        else:
-            return DateTime(iso)
-
-
-# Convert a time string from postgres to a Zope DateTime object.
-# NOTE: we set the day as today before feeding to DateTime so
-# that it has the same DST settings.
-def _cast_Time(iso, curs):
-    if iso:
-        if iso in ['-infinity', 'infinity']:
-            return iso
-        else:
-            return DateTime(
-                time.strftime('%Y-%m-%d %H:%M:%S',
-                              time.localtime(time.time())[:3] +
-                              time.strptime(iso[:8], "%H:%M:%S")[3:]))
-
-
-# NOTE: we don't cast intervals anymore because they are passed
-# untouched to Zope.
-def _cast_Interval(iso, curs):
-    return iso
-
-
-ZDATETIME = new_type((1184, 1114), "ZDATETIME", _cast_DateTime)
-ZINTERVAL = new_type((1186,), "ZINTERVAL", _cast_Interval)
-ZDATE = new_type((1082,), "ZDATE", _cast_Date)
-ZTIME = new_type((1083,), "ZTIME", _cast_Time)
-
-
-# table browsing helpers
-
-class Browser(Base):
-    def __getattr__(self, name):
-        try:
-            return self._d[name]
-        except KeyError:
-            raise AttributeError(name)
-
-
-class values:
-    def len(self):
-        return 1
-
-    def __getitem__(self, i):
-        try:
-            return self._d[i]
-        except AttributeError:
-            pass
-        self._d = self._f()
-        return self._d[i]
-
-
-class TableBrowser(Browser, Acquisition.Implicit):
-    icon = 'what'
-    Description = check = ''
-    info = DTMLFile('dtml/table_info', globals())
-    __allow_access_to_unprotected_subobjects__ = 1
-
-    def tpValues(self):
-        v = values()
-        v._f = self.tpValues_
-        return v
-
-    def tpValues_(self):
-        r = []
-        tname = self.__name__
-        for d in sorted(self._c.columns(tname), key=itemgetter('name')):
-            b = ColumnBrowser()
-            b._d = d
-            try:
-                b.icon = field_icons[d['type'].name]
-            except Exception:
-                pass
-            b.TABLE_NAME = tname
-            r.append(b)
-        return r
-
-    def tpId(self):
-        return self._d['TABLE_NAME']
-
-    def tpURL(self):
-        return "Table/%s" % self._d['TABLE_NAME']
-
-    def Name(self):
-        return self._d['TABLE_NAME']
-
-    def Type(self):
-        return self._d['TABLE_TYPE']
-
-    @staticmethod
-    def vartype(inVar):
-        "Get a type name for a variable suitable for use with dtml-sqlvar"
-        outVar = type(inVar)
-        if outVar == 'str':
-            outVar = 'string'
-        return outVar
-
-    def manage_buildInput(self, id, source, default, REQUEST=None):
-        "Create a database method for an input form"
-        args = []
-        values = []
-        names = []
-        columns = self._columns
-        for i in range(len(source)):
-            s = source[i]
-            if s == 'Null':
-                continue
-            c = columns[i]
-            d = default[i]
-            t = c['Type']
-            n = c['Name']
-            names.append(n)
-            if s == 'Argument':
-                values.append("<dtml-sqlvar %s type=%s>'" %
-                              (n, self.vartype(t)))
-                a = '%s%s' % (n, self.vartype(t).title())
-                if d:
-                    a = "%s=%s" % (a, d)
-                args.append(a)
-            elif s == 'Property':
-                values.append("<dtml-sqlvar %s type=%s>'" %
-                              (n, self.vartype(t)))
-            else:
-                if isinstance(t, str):
-                    if d.find("\'") >= 0:
-                        d = "''".join(d.split("\'"))
-                    values.append("'%s'" % d)
-                elif d:
-                    values.append(str(d))
-                else:
-                    raise ValueError(
-                        'no default was given for <em>%s</em>' % n)
-
-
-class ColumnBrowser(Browser):
-    icon = 'field'
-
-    def check(self):
-        return ('\t<input type=checkbox name="%s.%s">' %
-                (self.TABLE_NAME, self._d['name']))
-
-    def tpId(self):
-        return self._d['name']
-
-    def tpURL(self):
-        return "Column/%s" % self._d['name']
-
-    def Name(self):
-        return self._d['name']
-
-    def Description(self):
-        d = self._d
-        d['type_name'] = d['type'].name
-        if d['scale']:
-            return " %(type_name)s(%(precision)s,%(scale)s) %(null)s" % d
-        else:
-            return " %(type_name)s(%(precision)s) %(null)s" % d
-
-
-table_icons = {
-    'TABLE': 'table',
-    'VIEW': 'db_view',
-    'SYSTEM_TABLE': 'stable',
-}
-
-field_icons = {
-    NUMBER.name: 'int',
-    STRING.name: 'text',
-    DATETIME.name: 'date',
-    INTEGER.name: 'int',
-    FLOAT.name: 'float',
-    BOOLEAN.name: 'bin',
-    ROWID.name: 'int'
-}

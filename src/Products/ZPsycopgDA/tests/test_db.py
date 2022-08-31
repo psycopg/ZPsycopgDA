@@ -16,8 +16,10 @@ import threading
 import time
 import unittest
 
-from ..DA import ZDATETIME
+import psycopg2
+
 from ..db import DB
+from ..utils import ZDATETIME
 from . import DSN
 from . import NO_DB_MSG
 from .utils import have_test_database
@@ -58,8 +60,13 @@ class DBTests(unittest.TestCase):
     def test_instantiation_nondefaults(self):
         """ Test non-default values """
         db = self._makeOne('dsn', 'tilevel', 'typecasts', enc='latin-1')
-
         self.assertEqual(db.encoding, 'latin-1')
+
+        db = self._makeOne('dsn', 'tilevel', 'typecasts', enc=None)
+        self.assertEqual(db.encoding, 'utf-8')
+
+        db = self._makeOne('dsn', 'tilevel', 'typecasts', enc='')
+        self.assertEqual(db.encoding, 'utf-8')
 
     def test_sortKey(self):
         db = self._makeOne('dsn', 'tilevel', 'typecasts')
@@ -70,18 +77,63 @@ class DBTests(unittest.TestCase):
 @unittest.skipUnless(have_test_database(), NO_DB_MSG)
 class RealDBTests(unittest.TestCase):
 
+    def setUp(self):
+        self.conn = DB(DSN, tilevel=2, typecasts={})
+
+    def tearDown(self):
+        try:
+            self.conn.close()
+        except KeyError:
+            pass
+
+    def test_query(self):
+        tablename = 'test_%s' % str(time.time()).replace('.', '')
+
+        # Provoke an uncaught exception
+        with self.assertRaises(psycopg2.errors.SyntaxError):
+            self.conn.query('CREATE TABLE %s;' % tablename)
+        
+        # Successful queries
+        self.conn.query('CREATE TABLE %s(id integer);' % tablename)
+        self.assertEqual(self.conn.failures, 0)
+
+        self.conn.query('INSERT INTO %s VALUES (1);' % tablename)
+        self.assertEqual(self.conn.failures, 0)
+
+        res = self.conn.query('SELECT * FROM %s' % tablename)
+        self.assertEqual(self.conn.failures, 0)
+        self.assertEqual(res[1], [(1,)])
+
+        res = self.conn.query('SELECT * FROM %s' % tablename, max_rows=5)
+        self.assertEqual(self.conn.failures, 0)
+        self.assertEqual(res[1], [(1,)])
+
+        # Cleanup
+        self.conn.query('DROP table %s' % tablename)
+
+    def test_tables(self):
+        # Just test for any result
+        self.assertTrue(self.conn.tables())
+
+        # Restricting results to an unknown type leaves no results
+        self.assertFalse(self.conn.tables(_care=('FOO', 'BAR')))
+
+    def test_columns(self):
+        # Just test for any result
+        self.assertTrue(self.conn.columns('pg_tables'))
+
     def test_issue_142(self):
         tablename = 'test142_%s' % str(time.time()).replace('.', '')
         conn = DB(DSN, tilevel=2, typecasts={})
         conn.open()
         try:
-            cur1 = conn.getcursor()
+            cur1 = self.conn.getcursor()
             cur1.execute("create table %s(id integer)" % tablename)
             cur1.close()
-            cur2 = conn.getcursor()
+            cur2 = self.conn.getcursor()
             cur2.execute("insert into %s values (1)" % tablename)
             cur2.close()
-            cur3 = conn.getcursor()
+            cur3 = self.conn.getcursor()
             cur3.execute("select * from %s" % tablename)
             self.assertEqual(cur3.fetchone(), (1,))
             cur3.close()

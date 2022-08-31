@@ -11,6 +11,14 @@ Products.ZPsycopgDA
    :target: https://zpsycopgda.readthedocs.io
    :alt: Documentation Status
 
+.. image:: https://img.shields.io/pypi/v/Products.ZPsycopgDA.svg
+   :target: https://pypi.org/project/Products.ZPsycopgDA/
+   :alt: Latest stable release on PyPI
+
+.. image:: https://img.shields.io/pypi/pyversions/Products.ZPsycopgDA.svg
+   :target: https://pypi.org/project/Products.ZPsycopgDA/
+   :alt: Stable release supported Python versions
+
 
 This is a Zope database adapter for PostGreSQL based on psycopg2__ for Zope 4
 and up on all Python versions supported by Zope 4 and 5.

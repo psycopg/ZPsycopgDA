@@ -12,9 +12,6 @@ def _read(filename):
 long_description = (
     _read('README.rst')
     + '\n' +
-    'Contributors\n'
-    '============\n'
-    + '\n' +
     _read('CONTRIBUTORS.txt')
     + '\n' +
     _read('CHANGES.txt')

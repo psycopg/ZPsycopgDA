@@ -18,7 +18,6 @@
 
 from operator import itemgetter
 
-import psycopg2
 from psycopg2 import DATETIME
 from psycopg2.extensions import DATE
 from psycopg2.extensions import ISOLATION_LEVEL_REPEATABLE_READ

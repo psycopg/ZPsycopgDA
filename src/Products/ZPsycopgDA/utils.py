@@ -17,6 +17,7 @@ from App.special_dtml import HTMLFile
 from DateTime import DateTime
 from ExtensionClass import Base
 
+
 # zope-specific psycopg typecasters
 
 # convert an ISO timestamp string from postgres to a Zope DateTime object
@@ -90,7 +91,6 @@ class TableBrowser(Browser, Implicit):
             try:
                 b.icon = field_icons[d['type'].upper()]
             except Exception:
-                import pdb; pdb.set_trace()
                 pass
             b.table_name = tname
             r.append(b)

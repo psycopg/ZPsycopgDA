@@ -14,18 +14,9 @@
 """
 import unittest
 
-import psycopg2
-
-from DateTime.DateTime import DateTime
-
-from ..db import DB
-from ..utils import ZDATETIME
-from . import DSN
-from . import NO_DB_MSG
 from .dummy import COLUMNS
 from .dummy import TABLE
 from .dummy import FakeColumns
-from .utils import have_test_database
 
 
 class UtilsTest(unittest.TestCase):
@@ -48,9 +39,8 @@ class UtilsTest(unittest.TestCase):
         self.assertEqual(_cast_Time('-infinity', None), '-infinity')
 
         dt = _cast_Time('16:05:00', None)
-        today = DateTime()
         self.assertEqual(dt.parts(),
-                        (dt.year(), dt.month(), dt.day(), 16, 5, 0, 'GMT+0'))
+                         (dt.year(), dt.month(), dt.day(), 16, 5, 0, 'GMT+0'))
 
 
 class BrowserTestsBase(unittest.TestCase):

@@ -14,9 +14,9 @@
 """
 import unittest
 
-from DateTime.DateTime import DateTime
-
 import psycopg2
+
+from DateTime.DateTime import DateTime
 
 from ..DA import DEFAULT_TILEVEL
 from ..db import DB

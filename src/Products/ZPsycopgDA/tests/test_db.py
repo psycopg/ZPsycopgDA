@@ -92,7 +92,7 @@ class RealDBTests(unittest.TestCase):
         # Provoke an uncaught exception
         with self.assertRaises(psycopg2.errors.SyntaxError):
             self.conn.query('CREATE TABLE %s;' % tablename)
-        
+
         # Successful queries
         self.conn.query('CREATE TABLE %s(id integer);' % tablename)
         self.assertEqual(self.conn.failures, 0)

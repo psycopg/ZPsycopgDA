@@ -26,5 +26,5 @@ def have_test_database():
         conn.close()
         return True
     except psycopg2.OperationalError:
-        # import traceback; traceback.print_exc()
+        import traceback; traceback.print_exc()
         return False

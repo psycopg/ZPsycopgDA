@@ -99,7 +99,6 @@ class Connection(ConnectionBase):
     def __init__(self, id, title, connection_string,
                  zdatetime, check=None, tilevel=DEFAULT_TILEVEL,
                  encoding='UTF-8'):
-        self.zdatetime = zdatetime
         self.id = str(id)
         self.edit(title, connection_string, zdatetime,
                   check=check, tilevel=tilevel, encoding=encoding)

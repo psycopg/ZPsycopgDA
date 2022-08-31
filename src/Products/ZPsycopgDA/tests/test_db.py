@@ -12,7 +12,13 @@
 ##############################################################################
 """ Tests for the db module
 """
+import time
 import unittest
+
+from ..db import DB
+from . import DSN
+from . import NO_DB_MSG
+from .utils import have_test_database
 
 
 class DBTests(unittest.TestCase):
@@ -57,3 +63,25 @@ class DBTests(unittest.TestCase):
         db = self._makeOne('dsn', 'tilevel', 'typecasts')
 
         self.assertEqual(db.sortKey(), '1')
+
+
+@unittest.skipUnless(have_test_database(), NO_DB_MSG)
+class RealDBTests(unittest.TestCase):
+
+    def test_issue_142(self):
+        tablename = 'test142_%s' % str(time.time()).replace('.', '')
+        conn = DB(DSN, tilevel=2, typecasts={})
+        conn.open()
+        try:
+            cur1 = conn.getcursor()
+            cur1.execute("create table %s(id integer)" % tablename)
+            cur1.close()
+            cur2 = conn.getcursor()
+            cur2.execute("insert into %s values (1)" % tablename)
+            cur2.close()
+            cur3 = conn.getcursor()
+            cur3.execute("select * from %s" % tablename)
+            self.assertEqual(cur3.fetchone(), (1,))
+            cur3.close()
+        finally:
+            conn.close()

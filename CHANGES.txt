@@ -1,8 +1,8 @@
 Changelog
 =========
 
-3.0 (unreleased)
-----------------
+3.0b1 (2022-08-31)
+------------------
 
 - Re-released under the Zope Public License (ZPL) version 2.1
 
@@ -11,6 +11,8 @@ Changelog
 - Added compatibility with Zope 4 and Zope 5
 
 - Removed compatibility with Zope 2 and Zope 3
+
+- Added unit and functional tests
 
 
 2.4.7

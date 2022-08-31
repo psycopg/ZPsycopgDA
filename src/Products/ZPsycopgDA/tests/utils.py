@@ -26,7 +26,7 @@ def have_test_database():
         conn.close()
         return True
     except psycopg2.OperationalError:
-        print('Connection failed with DSN: %s' % DSN)
-        import traceback
-        traceback.print_exc()
+        # print('Connection failed with DSN: %s' % DSN)
+        # import traceback
+        # traceback.print_exc()
         return False

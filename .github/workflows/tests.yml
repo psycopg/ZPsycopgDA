@@ -78,7 +78,9 @@ jobs:
     - name: Test
       env:
         ZPSYCOPGDA_TEST_DSN: 'host=localhost port=5432 user=zpsycopgdatest password=zpsycopgdatest dbname=zpsycopgdatest'
-      run: tox -e ${{ matrix.config[1] }}
+      run: |
+        echo "Using DSN: {ZPSYCOPGDA_TEST_DSN}"
+        tox -e ${{ matrix.config[1] }}
     - name: Coverage
       if: matrix.config[1] == 'coverage'
       run: |

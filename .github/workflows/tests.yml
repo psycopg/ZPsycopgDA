@@ -72,12 +72,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install tox
-        psql -c "CREATE USER zpsycopgdatest WITH PASSWORD 'zpsycopgdatest';"
-        psql -c 'CREATE DATABASE zpsycopgdatest;'
-        psql -c 'GRANT ALL ON DATABASE zpsycopgdatest TO zpsycopgdatest;'
+        # psql -c "CREATE USER zpsycopgdatest WITH PASSWORD 'zpsycopgdatest';"
+        # psql -c 'CREATE DATABASE zpsycopgdatest;'
+        # psql -c 'GRANT ALL ON DATABASE zpsycopgdatest TO zpsycopgdatest;'
     - name: Test
       env:
-        ZPSYCOPGDA_TEST_DSN: 'host=localhost port=5432 user=zpsycopgdatest password=zpsycopgdatest dbname=zpsycopgdatest'
+        ZPSYCOPGDA_TEST_DSN: 'host=localhost port=5432 user=postgres password=postgres dbname=postgres'
       run: tox -e ${{ matrix.config[1] }}
     - name: Coverage
       if: matrix.config[1] == 'coverage'

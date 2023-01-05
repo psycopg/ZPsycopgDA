@@ -20,7 +20,7 @@ long_description = (
 
 setup(
     name='Products.ZPsycopgDA',
-    version='3.0b1',
+    version='3.0',
     license='ZPL 2.1',
     license_files=['LICENSE*'],
     author='Federico Di Gregorio',

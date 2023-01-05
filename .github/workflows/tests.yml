@@ -42,7 +42,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: github_actions
+          POSTGRES_DB: postgres
         ports:
           - 5432:5432
         # needed because the postgres container does not provide a healthcheck
@@ -72,9 +72,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install tox
-        # psql -c "CREATE USER zpsycopgdatest WITH PASSWORD 'zpsycopgdatest';"
-        # psql -c 'CREATE DATABASE zpsycopgdatest;'
-        # psql -c 'GRANT ALL ON DATABASE zpsycopgdatest TO zpsycopgdatest;'
     - name: Test
       env:
         ZPSYCOPGDA_TEST_DSN: 'host=localhost port=5432 user=postgres password=postgres dbname=postgres'

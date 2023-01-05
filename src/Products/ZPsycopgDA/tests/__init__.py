@@ -19,7 +19,3 @@ DEFAULT_DSN = ('user=zpsycopgdatest '
                'dbname=zpsycopgdatest')
 DSN = os.environ.get('ZPSYCOPGDA_TEST_DSN', DEFAULT_DSN)
 NO_DB_MSG = 'Please see the documentation for running functional tests.'
-
-import sys
-sys.stderr.write('XXXXXXXXX Using DSN %s' % DSN)
-sys.stderr.flush()

@@ -32,7 +32,7 @@ setup(
         'Documentation': 'https://zpsycopgda.readthedocs.io',
         'Issue Tracker': ('https://github.com/dataflake'
                           '/Products.ZPsycopgDA/issues'),
-        'Sources': 'https://github.com/zopefoundation/Products.ZPsycopgDA',
+        'Sources': 'https://github.com/dataflake/Products.ZPsycopgDA',
     },
     description='Zope database adapter for PostGreSQL',
     long_description=long_description,
@@ -54,6 +54,7 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: Implementation :: CPython',
         'Topic :: Database',
         'Topic :: Database :: Front-Ends',

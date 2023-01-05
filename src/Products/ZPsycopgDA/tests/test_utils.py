@@ -43,15 +43,7 @@ class UtilsTest(unittest.TestCase):
                          (dt.year(), dt.month(), dt.day(), 16, 5, 0, 'GMT+0'))
 
 
-class BrowserTestsBase(unittest.TestCase):
-
-    def test_getattr_attributeerror(self):
-        browser = self._makeOne()
-        with self.assertRaises(AttributeError):
-            browser.unknown
-
-
-class TableBrowserTests(BrowserTestsBase):
+class TableBrowserTests(unittest.TestCase):
 
     def _getTargetClass(self):
         from Products.ZPsycopgDA.utils import TableBrowser
@@ -68,6 +60,11 @@ class TableBrowserTests(BrowserTestsBase):
         self.assertEqual(browser.icon, 'what')
         self.assertEqual(browser.description(), TABLE['table_name'])
         self.assertEqual(browser.check, '')
+
+    def test_getattr_attributeerror(self):
+        browser = self._makeOne()
+        with self.assertRaises(AttributeError):
+            browser.unknown
 
     def test_getattr(self):
         browser = self._makeOne()
@@ -98,7 +95,7 @@ class TableBrowserTests(BrowserTestsBase):
         self.assertEqual(browser.type(), 'type1')
 
 
-class ColumnBrowserTests(BrowserTestsBase):
+class ColumnBrowserTests(unittest.TestCase):
 
     def _getTargetClass(self):
         from Products.ZPsycopgDA.utils import ColumnBrowser
@@ -113,6 +110,11 @@ class ColumnBrowserTests(BrowserTestsBase):
     def test_instantiation(self):
         browser = self._makeOne()
         self.assertEqual(browser.icon, 'field')
+
+    def test_getattr_attributeerror(self):
+        browser = self._makeOne()
+        with self.assertRaises(AttributeError):
+            browser.unknown
 
     def test_getattr(self):
         browser = self._makeOne()
@@ -157,9 +159,3 @@ class valuesTests(unittest.TestCase):
 
         vals._f = _callback
         self.assertEqual(vals[0], 'foo')
-
-
-def test_suite():
-    return unittest.TestSuite((unittest.makeSuite(TableBrowserTests),
-                               unittest.makeSuite(ColumnBrowserTests),
-                               unittest.makeSuite(valuesTests)))

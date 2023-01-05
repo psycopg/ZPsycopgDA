@@ -74,6 +74,7 @@ jobs:
         pip install tox
         psql -c "CREATE USER zpsycopgdatest WITH PASSWORD 'zpsycopgdatest';"
         psql -c 'CREATE DATABASE zpsycopgdatest;'
+        psql -c 'GRANT ALL ON SCHEMA zpsycopgdatest TO zpsycopgdatest;'
     - name: Test
       env:
         ZPSYCOPGDA_TEST_DSN: 'host=localhost port=5432 user=zpsycopgdatest password=zpsycopgdatest dbname=zpsycopgdatest'

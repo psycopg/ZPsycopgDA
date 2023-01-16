@@ -23,6 +23,9 @@ testenv-commands-pre = [
     "py27,py35,py36: {envbindir}/buildout -nc {toxinidir}/buildout4.cfg buildout:directory={envdir} buildout:develop={toxinidir} install test",
     "!py27-!py35-!py36: {envbindir}/buildout -nc {toxinidir}/buildout.cfg buildout:directory={envdir} buildout:develop={toxinidir} install test",
     ]
+testenv-additional = [
+    "passenv = ZPSYCOPGDA_TEST_DSN",
+    ]
 
 [manifest]
 additional-rules = [

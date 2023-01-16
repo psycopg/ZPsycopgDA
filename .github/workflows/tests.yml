@@ -12,30 +12,6 @@ on:
 
 jobs:
   build:
-    strategy:
-      # We want to see all failures:
-      fail-fast: false
-      matrix:
-        os:
-        - ["ubuntu", "ubuntu-20.04"]
-        config:
-        # [Python version, tox env]
-        - ["3.9",   "lint"]
-        - ["2.7",   "py27"]
-        - ["3.5",   "py35"]
-        - ["3.6",   "py36"]
-        - ["3.7",   "py37"]
-        - ["3.8",   "py38"]
-        - ["3.9",   "py39"]
-        - ["3.10",  "py310"]
-        - ["3.11",  "py311"]
-        - ["3.9",   "docs"]
-        - ["3.9",   "coverage"]
-
-    runs-on: ${{ matrix.os[1] }}
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
-    name: ${{ matrix.config[1] }}
-
     services:
       postgres:
         image: postgres:latest
@@ -47,7 +23,29 @@ jobs:
           - 5432:5432
         # needed because the postgres container does not provide a healthcheck
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    strategy:
+      # We want to see all failures:
+      fail-fast: false
+      matrix:
+        os:
+        - ["ubuntu", "ubuntu-20.04"]
+        config:
+        # [Python version, tox env]
+        - ["3.9",   "lint"]
+        - ["3.7",   "py37"]
+        - ["3.8",   "py38"]
+        - ["3.9",   "py39"]
+        - ["3.10",  "py310"]
+        - ["3.11",  "py311"]
+        - ["3.9",   "docs"]
+        - ["3.9",   "coverage"]
+        - ["2.7",   "py27"]
+        - ["3.5",   "py35"]
+        - ["3.6",   "py36"]
 
+    runs-on: ${{ matrix.os[1] }}
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    name: ${{ matrix.config[1] }}
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python
@@ -63,12 +61,6 @@ jobs:
           ${{ runner.os }}-pip-${{ matrix.config[0] }}-
           ${{ runner.os }}-pip-
     - name: Install dependencies
-      env:
-        PGHOST: localhost
-        PGPORT: ${{ job.services.postgres.ports[5432] }}
-        PGDATABASE: github_actions
-        PGUSER: postgres
-        PGPASSWORD: postgres
       run: |
         python -m pip install --upgrade pip
         pip install tox
@@ -79,7 +71,7 @@ jobs:
     - name: Coverage
       if: matrix.config[1] == 'coverage'
       run: |
-        pip install coveralls coverage-python-version
+        pip install coveralls
         coveralls --service=github
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

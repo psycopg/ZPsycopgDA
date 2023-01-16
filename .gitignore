@@ -1,3 +1,5 @@
+# Generated from:
+# https://github.com/zopefoundation/meta/tree/master/config/zope-product
 *.dll
 *.egg-info/
 *.profraw
@@ -26,4 +28,5 @@ lib64
 log/
 parts/
 pyvenv.cfg
+testing.log
 var/

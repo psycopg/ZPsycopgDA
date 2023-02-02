@@ -2,7 +2,7 @@
 # https://github.com/zopefoundation/meta/tree/master/config/zope-product
 [meta]
 template = "zope-product"
-commit-id = "4f0f7596"
+commit-id = "e5c611fb"
 
 [python]
 with-windows = false
@@ -14,22 +14,12 @@ with-macos = false
 
 [tox]
 use-flake8 = true
-additional-envlist = [
-    "py27",
-    "py35",
-    "py36",
-    ]
-testenv-commands-pre = [
-    "py27,py35,py36: {envbindir}/buildout -nc {toxinidir}/buildout4.cfg buildout:directory={envdir} buildout:develop={toxinidir} install test",
-    "!py27-!py35-!py36: {envbindir}/buildout -nc {toxinidir}/buildout.cfg buildout:directory={envdir} buildout:develop={toxinidir} install test",
-    ]
 testenv-additional = [
     "passenv = ZPSYCOPGDA_TEST_DSN",
     ]
 
 [manifest]
 additional-rules = [
-    "include buildout4.cfg",
     "recursive-include src *.dtml",
     "recursive-include src *.gif",
     "recursive-include src *.svg",
@@ -58,11 +48,6 @@ services = [
     "    - 5432:5432",
     "  # needed because the postgres container does not provide a healthcheck",
     "  options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5",
-    ]
-additional-config = [
-    "- [\"2.7\",   \"py27\"]",
-    "- [\"3.5\",   \"py35\"]",
-    "- [\"3.6\",   \"py36\"]",
     ]
 test-environment = [
     "ZPSYCOPGDA_TEST_DSN: 'host=localhost port=5432 user=postgres password=postgres dbname=postgres'",

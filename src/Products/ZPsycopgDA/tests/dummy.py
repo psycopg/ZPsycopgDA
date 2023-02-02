@@ -21,7 +21,7 @@ COLUMNS = [{'name': 'col1', 'description': 'desc1',
             'type': 'text', 'short_type': 'text'}]
 
 
-class FakeColumns(object):
+class FakeColumns:
 
     def __init__(self, table_name):
         self.cols = {table_name: COLUMNS}

@@ -164,8 +164,7 @@ class RealDBTests(unittest.TestCase):
             connection = conn.getconn().cursor().connection
             if (connection.string_types !=
                     {1114: ZDATETIME, 1184: ZDATETIME}):
-                failures.append(
-                    '%s fail (%s)' % (name, connection.string_types))
+                failures.append(f'{name} fail ({connection.string_types})')
 
         def test_connect(name):
             assert_casts(conn1, name)

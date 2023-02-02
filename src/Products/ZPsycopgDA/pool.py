@@ -24,13 +24,7 @@ import psycopg2
 from psycopg2.pool import PoolError
 
 
-try:
-    from threading import get_ident
-except ImportError:  # Python 2
-    from thread import get_ident
-
-
-class AbstractConnectionPool(object):
+class AbstractConnectionPool:
     """Generic key-based pooling code."""
 
     def __init__(self, minconn, maxconn, *args, **kwargs):
@@ -146,7 +140,7 @@ class PersistentConnectionPool(AbstractConnectionPool):
 
     def getconn(self):
         """Generate thread id and return a connection."""
-        key = get_ident()
+        key = threading.get_ident()
         self._lock.acquire()
         try:
             return self._getconn(key)
@@ -155,7 +149,7 @@ class PersistentConnectionPool(AbstractConnectionPool):
 
     def putconn(self, conn=None, close=False):
         """Put away an unused connection."""
-        key = get_ident()
+        key = threading.get_ident()
         self._lock.acquire()
         try:
             if not conn:

@@ -193,8 +193,11 @@ class Connection(Shared.DC.ZRDB.Connection.Connection):
 
     def get_type_casts(self):
         # note that in both cases order *is* important
-        if self.datetime_str:
-            return STRING, STRING, STRING
+        try:
+            if self.datetime_str:
+                return STRDATETIME, STRDATE, STRTIME
+        except AttributeError:  # datetime_str not present
+            pass
         if self.zdatetime:
             return ZDATETIME, ZDATE, ZTIME
         else:
@@ -321,11 +324,17 @@ def _cast_Time(iso, curs):
 def _cast_Interval(iso, curs):
     return iso
 
+def _cast_Str(iso, curs):
+    return iso
 
 ZDATETIME = new_type((1184, 1114), "ZDATETIME", _cast_DateTime)
 ZINTERVAL = new_type((1186,), "ZINTERVAL", _cast_Interval)
 ZDATE = new_type((1082,), "ZDATE", _cast_Date)
 ZTIME = new_type((1083,), "ZTIME", _cast_Time)
+
+STRDATETIME = new_type((1184, 1114), "STRDATETIME", _cast_Str)
+STRDATE = new_type((1082,), "STRDATE", _cast_Str)
+STRTIME = new_type((1083,), "STRTIME", _cast_Str)
 
 
 # table browsing helpers
